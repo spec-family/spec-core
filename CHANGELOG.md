@@ -14,6 +14,14 @@ copies a module names the spec-core commit in its own changelog.
   spec-graph, which holds a checklist or a ledger to the claims it cites
   (ADR-0004, amended 2026-11-07). Nothing that reads the scan changes.
 
+- **`findCommitReferences` in `markdown`: the commits a document names**,
+  `commit "Refuse a refund over its capture"` or `commit 1a2b3c4`, each with
+  its kind, its subject or hash and its offsets. Marked, never guessed: the
+  word, then a quoted subject or a hash of 7 to 40 digits on its line, and
+  never in code, a comment or front matter. For spec-graph, which holds a
+  register row and a checklist item to the commits they name (ADR-0004,
+  amended 2026-11-07). Nothing that reads the scan changes.
+
 ### Changed
 
 - **The family lives in the spec-family organization, and its packages are

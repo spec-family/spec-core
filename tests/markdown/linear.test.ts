@@ -29,7 +29,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { findClaims, scanMarkdown, sectionsOf, type MarkdownScan } from '../../src/markdown/index.js';
+import { findClaims, findCommitReferences, scanMarkdown, sectionsOf, type MarkdownScan } from '../../src/markdown/index.js';
 import { fastestInTurn } from '../timing.js';
 
 /** A scan with every part it makes when first asked for already made. */
@@ -186,6 +186,14 @@ describe('linear time on hostile input', () => {
     const claims = expectSameWork(make(1), make(16), (text) => findClaims(scanWhole(text), ['Implemented', 'Specified', 'Target']));
     expect(claims).toHaveLength(600);
     expect(claims.at(-1)?.labels).toEqual(['Implemented', 'Specified', 'Target']);
+  });
+
+  it('commit references whose quotes open and close only at the end', () => {
+    // Each opener would search to the one closing quote at the end, and every
+    // search but the first would read again what the first had read.
+    const make = (scale: number): string => `${'commit \u201cnever closed\n'.repeat(2_000 * scale)}commit \u201cclosed\u201d`;
+    const found = expectSameWork(make(1), make(16), (text) => findCommitReferences(scanWhole(text)));
+    expect(found.map((reference) => reference.value)).toEqual(['closed']);
   });
 
   it('many headings that slug alike, and their sections', () => {
