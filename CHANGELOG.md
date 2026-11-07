@@ -5,6 +5,15 @@ copies a module names the spec-core commit in its own changelog.
 
 ## Unreleased
 
+### Added
+
+- **`findClaims` in `markdown`: the list items that open with a label of a
+  vocabulary the caller names**, `` - `Implemented`: ``, each with its label,
+  every label its own text writes, and the item, whose range holds what is
+  written under it. For spec-guard, which holds a claim to its evidence, and
+  spec-graph, which holds a checklist or a ledger to the claims it cites
+  (ADR-0004, amended 2026-11-07). Nothing that reads the scan changes.
+
 ### Changed
 
 - **The family lives in the spec-family organization, and its packages are

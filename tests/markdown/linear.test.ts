@@ -29,7 +29,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { scanMarkdown, sectionsOf, type MarkdownScan } from '../../src/markdown/index.js';
+import { findClaims, scanMarkdown, sectionsOf, type MarkdownScan } from '../../src/markdown/index.js';
 import { fastestInTurn } from '../timing.js';
 
 /** A scan with every part it makes when first asked for already made. */
@@ -172,6 +172,20 @@ describe('linear time on hostile input', () => {
       return lines.join('\n');
     };
     expectLinear(make, (s) => expect(s.listItems.at(-1)?.depth).toBe(599));
+  });
+
+  it('claims nested deep, each holding labels, read for their own labels', () => {
+    // The nesting is what a naive reading pays for: each claim's spans would
+    // be read again for every item it is nested under.
+    const make = (scale: number): string => {
+      const lines: string[] = [];
+      for (let k = 0; k < 150 * Math.sqrt(scale); k += 1) lines.push(`${' '.repeat(k * 2)}- \`Implemented\` and \`Specified\` and \`Target\``);
+      lines.push('', 'text');
+      return lines.join('\n');
+    };
+    const claims = expectSameWork(make(1), make(16), (text) => findClaims(scanWhole(text), ['Implemented', 'Specified', 'Target']));
+    expect(claims).toHaveLength(600);
+    expect(claims.at(-1)?.labels).toEqual(['Implemented', 'Specified', 'Target']);
   });
 
   it('many headings that slug alike, and their sections', () => {

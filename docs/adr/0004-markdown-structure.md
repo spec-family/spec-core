@@ -158,6 +158,31 @@ Markdown, scanning took 28% less for what spec-guard reads and 34% less for
 what spec-harness reads, 5% less for spec-graph, which reads everything, with
 every answer identical.
 
+*Amended 2026-11-07.* **Claims, read here.** A consumer of the family marks
+each item of its specifications with how far it holds, `` - `Implemented`: ``
+or `` `Specified` ``, `` `Target` ``, `` `Hypothesis` ``, and asked that a
+claim be held to its evidence, and a checklist or a ledger to the claims it
+cites. spec-guard does the first and spec-graph the second, so which item is
+a claim, and of which label, is read here, once (`findClaims`):
+
+- **A claim is a list item whose text opens with a code span holding a label
+  of the vocabulary the caller names**, after a task checkbox where there is
+  one, exact in case. Prose, emphasis, or a span the vocabulary lacks makes
+  none: a code span at the head of an item is as often code.
+- **An item's own text is the item less what is nested under it**, so a
+  nested item is a claim of its own, and its labels are none of its parent's.
+  `labels` lists every label the own text writes as a code span, each once,
+  the opening one first; more than one is a claim that says two things, which
+  is the caller's to report.
+- **The item keeps its whole range**, so what is written under it, a
+  directive with the rest, lies inside it, and the innermost claim around an
+  offset is the one it belongs to.
+- **One pass**, over the items and the code spans in document order with the
+  open items on a stack: claims nested six hundred deep are read in time
+  linear in the document (`tests/markdown/linear.test.ts`), and 300 documents
+  made at random agree with a reading that compares every item and span with
+  every other.
+
 ## Open questions
 
 - **Slugs.** `slugify` keeps spec-graph's results, which drop `_` where
