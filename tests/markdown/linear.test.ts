@@ -29,7 +29,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { findClaims, findCommitReferences, scanMarkdown, sectionsOf, type MarkdownScan } from '../../src/markdown/index.js';
+import { findClaims, findCommitReferences, findItemIds, findRegisterRows, scanMarkdown, sectionsOf, type MarkdownScan } from '../../src/markdown/index.js';
 import { fastestInTurn } from '../timing.js';
 
 /** A scan with every part it makes when first asked for already made. */
@@ -197,6 +197,21 @@ describe('linear time on hostile input', () => {
     // And with no closing quote anywhere, which each would search for to the end.
     const none = (scale: number): string => 'commit “never closed\n'.repeat(2_000 * scale);
     expect(expectSameWork(none(1), none(16), (text) => findCommitReferences(scanWhole(text)))).toEqual([]);
+  });
+
+  it('named items nested deep, each under its own directive, and the rows of a long register', () => {
+    // The nesting is what a naive binding pays for: each directive would look
+    // again at every item it is nested under.
+    const make = (scale: number): string => {
+      const lines: string[] = [];
+      for (let k = 0; k < 150 * Math.sqrt(scale); k += 1) lines.push(`${' '.repeat(k * 2)}<!-- @spec-item id="i${k}" -->`, `${' '.repeat(k * 2)}- item`);
+      lines.push('', 'text');
+      return lines.join('\n');
+    };
+    const named = expectSameWork(make(1), make(16), (text) => findItemIds(scanWhole(text)));
+    expect(named.size).toBe(600);
+    const register = (scale: number): string => `| Key | Status |\n| --- | --- |\n${'| k | open |\n'.repeat(2_000 * scale)}`;
+    expect(expectSameWork(register(1), register(16), (text) => findRegisterRows(scanWhole(text)))).toHaveLength(32_000);
   });
 
   it('many headings that slug alike, and their sections', () => {

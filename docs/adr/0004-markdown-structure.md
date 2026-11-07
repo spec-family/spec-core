@@ -206,6 +206,29 @@ commit is read here, once (`findCommitReferences`):
 - Whether the commit exists is the caller's to ask of git. Nothing here reads
   it (ADR-0002).
 
+*Amended 2026-11-08.* **What a comment annotates, and a register's rows,
+read here.** spec-brief names the claims a round raises by the name
+`<!-- @spec-item id="..." -->` gives an item, and the register rows it waits
+on by their keys; spec-graph reads both already. The two readings moved here
+from spec-graph as they stood, so the tools answer alike:
+
+- **`bindToItems`**: an annotation written in a comment is about the item
+  directly below it, with nothing but blank lines or other comments between,
+  or else the one it is written on or indented under; written flush under an
+  item and above no other, it continues that item. Code, raw-text HTML and
+  front matter are no blank line. One pass, the open items on a stack.
+- **`findItemIds`**: the name each item's `@spec-item` gives it - a closed
+  comment that opens with the directive, attributes quoted with either mark
+  or bare, the last `id` written, a flag read as `true` - and where two are
+  about one item, the last is its own.
+- **`findRegisterRows`**: each table with a column whose header names a key
+  (`ID`, `Key`, `Ref`, `#`, `ADR`, ...) and one after it naming a status
+  (`Status`, `State`, `Stage`, ...); each row named by its key cell read
+  flat, a key of no letter or digit or a placeholder naming none, at the
+  status its cell says, or none for an empty cell or a placeholder.
+- spec-graph's own cases are the tests here, each answered as it answered
+  them; spec-graph reads through these from its next release.
+
 ## Open questions
 
 - **Slugs.** `slugify` keeps spec-graph's results, which drop `_` where
