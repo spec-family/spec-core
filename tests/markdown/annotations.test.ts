@@ -81,6 +81,15 @@ describe('the name a @spec-item gives', () => {
   });
 });
 
+describe('the names found', () => {
+  it('are only of items, and only where the directive gives an id', () => {
+    const scan = (text: string) => findItemIds(scanMarkdown(text));
+    expect(scan('<!-- @spec-item id="nowhere" -->\n\nProse.\n').size).toBe(0);
+    expect(scan('<!-- @spec-item state="open" -->\n- a\n').size).toBe(0);
+    expect([...scan('<!-- @spec-item id="one" -->\n- a\n').values()]).toEqual(['one']);
+  });
+});
+
 describe('an annotation of no item', () => {
   it('binds to nothing, and none asked binds none', () => {
     const scan = scanMarkdown('Prose. <!-- a -->\n\n# Heading\n');

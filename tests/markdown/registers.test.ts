@@ -31,13 +31,14 @@ describe('a register row', () => {
   });
 
   it('is read under every header that names a key or a status, however it is cased or marked', () => {
-    for (const [key, status] of [['ID', 'State'], ['**Ref**', 'stage'], ['#', 'Lifecycle'], ['ADR', '`Phase`'], ['Decision', 'Status:']]) {
+    for (const [key, status] of [['ID', 'State'], ['**Ref**', 'stage'], ['#', 'Lifecycle'], ['ADR', '`Phase`'], ['Decision', 'Status:'], ['Key ✓', 'Status ✓']]) {
       expect(rows(doc(`| ${key} | ${status} |`, '| --- | --- |', '| x-1 | open |')), `${key} ${status}`).toEqual([['x-1', 'open', 3]]);
     }
   });
 
-  it('takes the first column that names a key and the first after it that names a status', () => {
+  it('takes the first column that names a key and the first after it that names a status, wherever they stand', () => {
     expect(rows(doc('| ID | Key | Status | State |', '| --- | --- | --- | --- |', '| a | b | open | done |'))).toEqual([['a', 'open', 3]]);
+    expect(rows(doc('| Title | ID | Status |', '| --- | --- | --- |', '| t | a | open |', '| short |'))).toEqual([['a', 'open', 3]]);
   });
 
   it('is no row of a table without a key column or a status column', () => {
@@ -53,16 +54,17 @@ describe('a register row', () => {
       '| - | open |',
       '| ? | open |',
       '| N/A | open |',
+      '| __ | open |',
       '| a | |',
       '| b | TBD |',
       '| c | — |',
       '| d |',
     );
     expect(rows(text)).toEqual([
-      ['a', null, 7],
-      ['b', null, 8],
-      ['c', null, 9],
-      ['d', null, 10],
+      ['a', null, 8],
+      ['b', null, 9],
+      ['c', null, 10],
+      ['d', null, 11],
     ]);
     expect(findRegisterRows(scanMarkdown(text)).at(-1)?.statusCell).toBeNull();
   });
@@ -77,6 +79,6 @@ describe('a register row', () => {
 
 describe('a cell read flat', () => {
   it('keeps link labels, drops code and emphasis marks, and folds space', () => {
-    expect(flatCell('  `a`  **b** _c_ ~~d~~ [e](f.md) ![g](h.png) [[i]] [[j|k]]  ')).toBe('a b c d e g i k');
+    expect(flatCell('  `a`  **b** _c_ ~~d~~ [e](f.md) ![g](h.png) [[i]] [[target|k]]  ')).toBe('a b c d e g i k');
   });
 });
