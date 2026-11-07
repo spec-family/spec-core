@@ -67,6 +67,19 @@ describe('claims', () => {
     ]);
   });
 
+  it('gives a parent the labels it writes after an item nested under it', () => {
+    const text = doc('- `Target`: the parent.', '  - `Specified`: the nested one.', '', '  Back in the parent, `Implemented`.');
+    expect(claims(text)).toEqual([
+      [1, 'Target', ['Target', 'Implemented']],
+      [2, 'Specified', ['Specified']],
+    ]);
+  });
+
+  it('reads a span before any item, and one after them all, as no item\'s', () => {
+    expect(claims(doc('`Implemented` opens a paragraph.', '', '- `Specified`: one.', '', '`Target` after the list.'))).toEqual([[3, 'Specified', ['Specified']]]);
+    expect(claims('`Implemented` and no list at all.')).toEqual([]);
+  });
+
   it('keeps the item whole, so a directive under it is found inside its range', () => {
     const text = doc('- `Implemented`: one.', '  <!-- @assert-count target="src" symbol="fn test_one" min="1" -->', '', 'After.');
     const [claim] = findClaims(scanMarkdown(text), LABELS) as [Claim];
