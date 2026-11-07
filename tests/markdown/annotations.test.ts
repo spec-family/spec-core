@@ -70,11 +70,14 @@ describe('the name a @spec-item gives', () => {
     expect(ids('<!-- @spec-item id=bare state="open" -->', '- a')).toEqual(['bare']);
     expect(ids('<!-- @spec-item id="first" ID="second" -->', '- a')).toEqual(['second']);
     expect(ids('<!-- @spec-item title="x" id -->', '- a')).toEqual(['true']);
+    // An attribute whose name begins with the two letters is another attribute.
+    expect(ids('<!-- @spec-item id="limit" identity="other" -->', '- a')).toEqual(['limit']);
   });
 
   it('is read only from @spec-item, opening a closed comment', () => {
     expect(ids('<!-- @spec-node id="ADR-0001" -->', '- a')).toEqual([null]);
     expect(ids('<!-- @spec-items id="x" -->', '- a')).toEqual([null]);
+    expect(ids('<!--@spec-item id="tight"-->', '- a', '<!--   @spec-item id="wide" -->', '- b')).toEqual(['tight', 'wide']);
     expect(ids('<!-- note @spec-item id="x" -->', '- a')).toEqual([null]);
     expect(ids('Write `<!-- @spec-item id="x" -->` above.', '', '- a')).toEqual([null]);
     expect(ids('- a', '<!-- @spec-item id="x"')).toEqual([null]);
