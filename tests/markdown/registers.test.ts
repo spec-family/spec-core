@@ -44,6 +44,10 @@ describe('a register row', () => {
   it('is no row of a table without a key column or a status column', () => {
     expect(rows(doc('| Key | Problem |', '| --- | --- |', '| a | b |'))).toEqual([]);
     expect(rows(doc('| Title | Status |', '| --- | --- |', '| a | open |'))).toEqual([]);
+    // A header names a column only as a whole: one that begins or ends with such a word names neither.
+    for (const [key, status] of [['Paid', 'Status'], ['Notes', 'Status'], ['Key', 'Last stage'], ['Key', 'Stated by']]) {
+      expect(rows(doc(`| ${key} | ${status} |`, '| --- | --- |', '| a | open |')), `${key} ${status}`).toEqual([]);
+    }
   });
 
   it('is no row where its key names nothing, and has no status where its cell says nothing', () => {
@@ -68,6 +72,11 @@ describe('a register row', () => {
       ['d', null, 12],
     ]);
     expect(findRegisterRows(scanMarkdown(text)).at(-1)?.statusCell).toBeNull();
+    // A placeholder is the whole cell: a key that begins or ends like one is a key.
+    expect(rows(doc('| Key | Status |', '| --- | --- |', '| arena | open |', '| nationality | -- |'))).toEqual([
+      ['arena', 'open', 3],
+      ['nationality', null, 4],
+    ]);
   });
 
   it('is read in every table of the document, in order', () => {
