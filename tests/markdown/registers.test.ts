@@ -54,6 +54,7 @@ describe('a register row', () => {
       '| - | open |',
       '| ? | open |',
       '| N/A | open |',
+      '| na | open |',
       '| __ | open |',
       '| a | |',
       '| b | TBD |',
@@ -61,10 +62,10 @@ describe('a register row', () => {
       '| d |',
     );
     expect(rows(text)).toEqual([
-      ['a', null, 8],
-      ['b', null, 9],
-      ['c', null, 10],
-      ['d', null, 11],
+      ['a', null, 9],
+      ['b', null, 10],
+      ['c', null, 11],
+      ['d', null, 12],
     ]);
     expect(findRegisterRows(scanMarkdown(text)).at(-1)?.statusCell).toBeNull();
   });
