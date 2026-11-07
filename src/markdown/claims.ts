@@ -72,7 +72,9 @@ export function findClaims(scan: MarkdownScan, vocabulary: readonly string[]): C
     }
     while (stack.length > 0 && stack[stack.length - 1]!.end <= span.start) stack.pop();
     const item = stack[stack.length - 1];
-    if (item === undefined || span.start < item.textStart) continue;
+    // No span opens between an item's start and its text: there are only its
+    // indent, its marker and a checkbox.
+    if (item === undefined) continue;
     const label = spanText(scan.text, span);
     if (!known.has(label)) continue;
     if (span.start === item.textStart) opening.add(item);
