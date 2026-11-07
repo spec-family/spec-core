@@ -11,10 +11,10 @@ const claims = (text: string, vocabulary: readonly string[] = LABELS): [number, 
 describe('claims', () => {
   it('reads an item that opens with a label as a claim, by bullet, number or checkbox', () => {
     const text = doc(
-      '- `Implemented`: the checker refuses a loop with no measure.',
-      '1. `Specified` units carry a scale.',
+      '- `Implemented`: a refund over the captured amount is refused.',
+      '1. `Specified` refunds carry a reason.',
       '- [x] `Target`: a build under a second.',
-      '> - `Hypothesis` agents write fewer guards. Criterion: the pass rate.',
+      '> - `Hypothesis` retries cut failed captures. Criterion: the failure rate.',
     );
     expect(claims(text)).toEqual([
       [1, 'Implemented', ['Implemented']],
@@ -26,7 +26,7 @@ describe('claims', () => {
 
   it('makes no claim of an item that opens with anything else', () => {
     const text = doc(
-      '- The checker is `Implemented` as a token check.',
+      '- The refund rule is `Implemented` as a token check.',
       '- **Implemented**: bold is not a label.',
       '- `Implemented_by`: a span the vocabulary lacks.',
       '- `implemented`: in another case.',
@@ -44,16 +44,16 @@ describe('claims', () => {
   });
 
   it('names every label the item itself writes, once, the opening one first', () => {
-    const text = doc('- `Specified`; the conversion is `Implemented` and `Implemented`, `Target` later.', '  More of it, still `Target`.');
+    const text = doc('- `Specified`; the partial refund is `Implemented` and `Implemented`, `Target` later.', '  More of it, still `Target`.');
     expect(claims(text)).toEqual([[1, 'Specified', ['Specified', 'Implemented', 'Target']]]);
   });
 
   it('gives a nested item its own claim, and none of its labels to the item above', () => {
     const text = doc(
-      '1. Loops.',
-      '   - `Implemented`: `while` needs `decreases`.',
-      '     <!-- @assert-count target="compiler" symbol="fn test_totality" min="1" -->',
-      '     - `Specified`: recursion needs a measure, not `Implemented`.',
+      '1. Refunds.',
+      '   - `Implemented`: `refund` needs a `capture`.',
+      '     <!-- @assert-count target="payments" symbol="fn test_refund_limit" min="1" -->',
+      '     - `Specified`: a partial refund needs a reason, not `Implemented`.',
       '   - `Hypothesis`: no `Target` yet.',
       '- `Target` above a nested `Specified` item:',
       '  - `Specified`: the nested one.',

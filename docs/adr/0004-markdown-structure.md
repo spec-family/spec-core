@@ -183,6 +183,29 @@ a claim, and of which label, is read here, once (`findClaims`):
   made at random agree with a reading that compares every item and span with
   every other.
 
+*Amended 2026-11-07.* **Commit references, read here.** A register row that
+is done names the commit that did it, and a ticked checklist item may name
+one as its evidence. spec-graph holds both to the history, and a document
+that orients a reader will be held the same way, so which words name a
+commit is read here, once (`findCommitReferences`):
+
+- **Marked, never guessed.** The word `commit`, in any case, then spaces or
+  tabs on its line, then a subject between quotes, straight or curly, closed
+  on that line and not blank, or a hash of 7 to 40 hexadecimal digits that
+  is a whole word or the whole of a code span: `commit "Refuse a refund over
+  its capture"`, `commit 1a2b3c4`. `commits`, `recommit`, "commit to" and a
+  hash that runs on into a word name nothing.
+- **The word is read where structure is**, in the structure mask, so one in
+  code, a comment or front matter names nothing; what follows it is read in
+  the text, so a subject keeps the code spans and markup it holds.
+- **A reference read is stepped past**, so a subject that says "commit" is
+  one reference.
+- **Linear.** Each closing quote is looked for forward from where it was
+  last found, so quotes that open and never close are read in time linear in
+  the document (`tests/markdown/linear.test.ts`).
+- Whether the commit exists is the caller's to ask of git. Nothing here reads
+  it (ADR-0002).
+
 ## Open questions
 
 - **Slugs.** `slugify` keeps spec-graph's results, which drop `_` where
