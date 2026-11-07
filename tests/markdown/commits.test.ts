@@ -57,6 +57,14 @@ describe('commit references', () => {
     expect(references(text)).toEqual([['hash', '1234567', 'commit 1234567']]);
   });
 
+  it('reads a hash where no quote opens, whatever the rest of the line says', () => {
+    expect(references('commit 1234567 is undefined so far')).toEqual([['hash', '1234567', 'commit 1234567']]);
+  });
+
+  it('reads no hash in a code span that holds a backtick inside it', () => {
+    expect(references('commit `` 123`4567 `` and commit ``1234567` ``')).toEqual([]);
+  });
+
   it('names nothing where a quote does not close on its line, or closes on nothing', () => {
     expect(references(doc('commit "a', 'b" and later "c"'))).toEqual([]);
     expect(references('commit "" and commit "   "')).toEqual([]);

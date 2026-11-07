@@ -194,6 +194,9 @@ describe('linear time on hostile input', () => {
     const make = (scale: number): string => `${'commit \u201cnever closed\n'.repeat(2_000 * scale)}commit \u201cclosed\u201d`;
     const found = expectSameWork(make(1), make(16), (text) => findCommitReferences(scanWhole(text)));
     expect(found.map((reference) => reference.value)).toEqual(['closed']);
+    // And with no closing quote anywhere, which each would search for to the end.
+    const none = (scale: number): string => 'commit “never closed\n'.repeat(2_000 * scale);
+    expect(expectSameWork(none(1), none(16), (text) => findCommitReferences(scanWhole(text)))).toEqual([]);
   });
 
   it('many headings that slug alike, and their sections', () => {
