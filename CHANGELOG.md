@@ -22,6 +22,13 @@ copies a module names the spec-core commit in its own changelog.
   register row and a checklist item to the commits they name (ADR-0004,
   amended 2026-11-07). Nothing that reads the scan changes.
 
+- **`bindToItems`, `findItemIds` and `findRegisterRows` in `markdown`: what
+  a comment annotates, the name a `@spec-item` gives an item, and a
+  register's rows by key and status**, as spec-graph read them, for
+  spec-brief, which names the claims a round raises and the rows it waits on
+  by them, and for spec-graph, which reads through them next (ADR-0004,
+  amended 2026-11-08). Nothing that reads the scan changes.
+
 ### Changed
 
 - **The family lives in the spec-family organization, and its packages are
