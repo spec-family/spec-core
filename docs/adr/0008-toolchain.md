@@ -42,9 +42,13 @@ runs on; see below.
 Re-read this table when it is a quarter old, when Vitest 5 has had a release
 line's worth of patches, or when TypeScript ships its programmatic API.
 *Amended 2026-10-07*: Vitest 5 has had them, and they are not what it waits
-for; see below.
+for; see below. *Amended 2026-11-08*: what it waited for came in Stryker
+10.1.0, and vitest 5 is taken here; see the last amendment.
 
 ## Amended 2026-10-07: vitest is held on 4 until Stryker's runner reads 5
+
+*Amended 2026-11-08*: the hold is lifted here, by the steps below; the
+amendment of that date has what they measured.
 
 Vitest 5.0.0 is from 3 September and 5.0.3 from 30 September, and on
 2026-10-06 Dependabot proposed 5 in all five repositories. It is not taken,
@@ -347,3 +351,86 @@ spec-guard's engine budgets are not a gate and do not move by these steps.
 Its ADR-0004 measured them on `ubuntu-24.04` with the ripgrep that apt
 installs there, 14.1.0; whether 15.1.0 on Ubuntu 26.04 moves the Linux
 budget is that record's to measure.
+
+## Amended 2026-11-08: vitest 5, here first
+
+Stryker 10.1.0, of 2026-10-23, names #6214 in its notes, "support vitest
+v5", and 10.1.1 followed within the hour. Its vitest runner joins a test's
+name with ` > ` where it finds vitest 5 or later and with a space before
+(`VITEST_MODERN_TEST_NAME_SEPARATOR` in `dist/src/test-helpers.js`, chosen
+by `semver.gte(vitest.version, '5.0.0-0')` in `vitest-test-runner.js`),
+which is what #6210 asked for. Dependabot's pull request brought both
+packages to 10.1.1 here (#52) and in the four tools on 2026-11-08, and the
+steps of the amendment of 2026-10-07 were taken here the same day, in
+pull request #57.
+
+**What changed.** `vitest` and `@vitest/coverage-v8` went to 5.0.5, of
+2026-10-15, the newest patch of 5.0; 5.1.0, of 2026-11-02, was six days old,
+under the two weeks a minor waits. The hold went in the same commit: the
+test in `tests/boundaries.test.ts` and the two vitest entries under `ignore`
+in `.github/dependabot.yml`. Three tests in `tests/mutation-shards.test.ts`
+failed on vitest 5, each on a change of vitest's own, and were fixed in a
+commit of their own:
+
+- A sequencer asks vitest's cache by a file's specification,
+  `getTestSpecificationResult`, and the cache keeps no sizes: vitest's own
+  sequencer reads a file's size from the disk where the file has no
+  result. `getFileTestResults` and `getFileStats` remain, deprecated.
+  `QuickestFirst` asks what vitest's sequencer asks and reads a size as it
+  does.
+- `resolveConfig` returns Vite's resolved configuration, with vitest's
+  under `test`.
+- The reporters a suite that names none is given are decided when vitest
+  is first imported (`configDefaults`), so the test resolves the suite in a
+  process started with `GITHUB_ACTIONS` set, where it had stubbed the
+  variable in its own.
+
+**What it measured.** The pull request's sweep, run 42472014545, beside
+main's last sweep of the same source, run 42455582424 at 8b0c22e:
+
+| Vitest | Score | Mutants | Killed | Timed out | Survived | No coverage | Survived, covered, untested |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 4.1.12 | 96.45% | 5,972 | 5,521 | 239 | 205 | 7 | 0 |
+| 5.0.5 | 96.37% | 5,972 | 5,513 | 242 | 210 | 7 | 0 |
+
+Both conditions held: 0.08 of a point apart, and no survivor ran no test.
+26 mutants had another verdict, and each was read:
+
+- Six in `src/text/lines.ts`, at lines 65, 77 and 78, timed out on main and
+  survived here after all 282 tests that cover them. `end >= start` at 77
+  is one of the nine ADR-0007's entry of 2026-10-24 found decided by a
+  clock; the other five are mutants of the same two comparisons.
+- `src/pattern/automaton.ts` 164, the arrow of the match state made `+1`,
+  was killed on main by the cost test of the glob matcher, the one that
+  still allows a tenth of a millisecond for noise, after 95 of its 102
+  tests, and survived here: a verdict of that test's clock.
+- Two survived on main and timed out here, `src/markdown/scan.ts` 221 and
+  `src/pattern/charset.ts` 42.
+- Twelve killed on main timed out here, and five went the other way. Eight
+  of the twelve are mutants of `serveLines` in `src/jsonrpc/mcp.ts` that
+  leave its promise unsettled: `tests/jsonrpc.test.ts` reads that within a
+  turn of the event loop, and `tests/object-names.test.ts` awaits it, so
+  the file that runs first decides between a kill and a timeout. Each is
+  detected either way.
+
+**The order a mutant's files run in.** Vitest 5 counts a run that a test
+name pattern narrows as partial, and keeps a file's time and a failure
+from such a run until a run of the whole file passes (`ResultsCache.update`
+and `isPartialRun`). Stryker narrows every mutant's run so, through
+`testNamePattern`, and only the dry run and a static mutant's are whole. So
+a file that failed for one mutant stays among the first for the mutants
+after it, where vitest 4 put it first only after the run it failed in.
+Killed mutants ran 10.75 tests each up to the one that failed, against 6.89
+on main, and the first test failed for 2,943 of them, against 3,231. The
+six shards took 30m57s, against 32m51s for main's, on one sweep each: the
+order kills later and the runs cost less. Giving the order its memory of
+the last run back would take a record of its own, which a reporter could
+keep for the sequencer to read; this amendment measures that and does not
+do it.
+
+**What follows.** Step 4 of the amendment of 2026-10-07: the same change in
+spec-brief, spec-graph, spec-guard and spec-harness, a pull request each,
+with `mutation.yml` dispatched on its branch for the full sweep (in
+spec-brief with `full` ticked) and held to the same two conditions against
+that repository's last sweep of main. Each takes out its own hold, and
+spec-guard's is the pin and the assertion in its ADR-0003.

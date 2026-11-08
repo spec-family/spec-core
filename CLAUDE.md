@@ -59,11 +59,10 @@ anything else, and the sweep's merge job does too
 (`scripts/mutation-unmeasured.mjs`;
 [ADR-0007](docs/adr/0007-verification.md), 2026-10-12).
 
-Vitest stays on 4 while Stryker's runner runs no test against a mutant on 5,
-where the sweep reads 4%: Dependabot proposes no major of it,
-`tests/boundaries.test.ts` fails one made by hand, and
-[ADR-0008](docs/adr/0008-toolchain.md) has the reason and the steps that
-lift the hold, here first and then in the four tools.
+Vitest is on 5 here since 2026-11-08, when Stryker 10.1's runner read its
+test names and the sweep of the change read as main's;
+[ADR-0008](docs/adr/0008-toolchain.md) has the measurement, and the steps
+the four tools follow, each with a full sweep of its own branch.
 
 Run a tool through `npm run <script>` or `npx --no-install <tool>`, never a
 bare `npx <name>`: before `npm ci` that fetches whatever the registry has
