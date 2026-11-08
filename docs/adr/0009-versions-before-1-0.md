@@ -87,6 +87,27 @@ it: the tool is in use in a repository outside the spec-family
 organization. What the condition asks for is a user who is not the family
 itself, and the family's home is now spec-family.
 
+*Amended 2026-11-08*: **the user is someone other than the tools'
+author.** Read by its words, the amendment above is met by a repository of
+the tools' author in an organization other than spec-family, and that is
+a user who is the family itself. So the second condition reads: the tool
+is in use in a repository of a user other than the tools' author, in any
+organization (the maintainer's decision of 2026-11-08, at the start of
+round 27).
+
+*Amended 2026-11-08*: **two minors with the output held, and new rules
+first as warnings.** The first condition is no longer left to be met by
+chance. From each tool's first release after round 27, the round of work
+opened on 2026-11-08, its JSON fields and its exit codes stay unchanged for
+two consecutive minor releases: no field a script reads is removed,
+renamed or given another meaning, no `schemaVersion` moves, and no exit
+code comes to mean something else. From then on a new rule ships first as
+a warning, which does not change the exit code, or behind an option that
+turns it on, and becomes a finding that fails a run by default only in a
+later minor, whose CHANGELOG says so under *Changed* with its `Upgrading:`
+line. The definitions of a minor and a patch above are unchanged (the
+maintainer's decision of 2026-11-08).
+
 After 1.0 the same rule moves up one place: what can turn a run red is a
 major, a feature a minor, and a patch reports less or crashes less.
 
