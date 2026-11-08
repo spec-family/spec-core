@@ -364,7 +364,11 @@ function scanCore(text: string, index: LineIndex, frontLines: number): Core {
   let raw: Open | null = null;
   let indented: Mutable<Block> | null = null;
   let previousBlank = true;
-  // The content column of each list item open around the line, innermost last.
+  // The content column of each list item open around the line, innermost
+  // last. The first line that is not blank ends every item, as a line after a
+  // blank one does (`previousBlank` starts true), so what the stack starts
+  // with is never read.
+  // Stryker disable next-line ArrayDeclaration: the first line that is not blank ends every item before one is read.
   const items: number[] = [];
   // Ends the items whose content starts right of `indent`, from the innermost
   // out: those after the last that starts at or left of it, all where none

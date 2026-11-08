@@ -361,7 +361,7 @@ describe('this repository', () => {
  * joins on purpose.
  */
 describe('the marks that leave a mutant out of the sweep', () => {
-  const MARKED = 5;
+  const MARKED = 6;
   const MARK = /\bStryker\s+(?:disable|restore)\b/i;
   const FORM = /^\/\/ Stryker disable next-line [A-Z][A-Za-z]+(?:,[A-Z][A-Za-z]+)*: \S/;
 

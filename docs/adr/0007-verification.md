@@ -992,13 +992,14 @@ set of one character to what the module says of it for any point: of `/`,
 which no glob literal is, it is the separator's and accepts `/`, and of no
 other character does it.
 
-**Marked**, where every way of writing the line makes one, five times: in
+**Marked**, where every way of writing the line makes one, six times: in
 `links.ts` the two walks that end at `to` (`at <= to`), the test that leaves
 a link's text (`at > end`, which leaves at the `]` or one step past it, and
 resumes at the same place), and the tests of a blank or a code line that
 only shape a paragraph's run (`true`, and `||` between the two), on a line
 of their own; in `scan.ts` the loop over the lines'
-shapes (`i <= count`). Each mark leaves out the other mutants of its mutator
+shapes (`i <= count`), and, after the second sweep below, the list items'
+stack's first value. Each mark leaves out the other mutants of its mutator
 on its line as well, six, each killed and each with another mutant beside it
 that is killed too: `at >= to` twice and `i >= count`, beside `false` for
 the same loop; `false` for the paragraph's tests, beside `line.blank` for
@@ -1038,5 +1039,17 @@ definition's line, and the mark there names `LogicalOperator` as well. Put
 in by hand and run on the 60,000 documents, that mutant and `true` for the
 line changed nothing, and the four mutants of the test of a definition's
 line, put in the same way, each failed a test.
+
+The sweep after that, run 42478494817, read 96.64% again over the same
+counts, with `||` ignored, and found a second equivalent the rewrite had
+made: the list items' stack made to start as `["Stryker was here"]`, which
+timed out in the first sweep and survived in this one. The old loop never
+popped a string, since it is not greater than any indent, and the margin it
+gave failed the tests of indented code; `findLastIndex` keeps no string,
+since it is not at or left of any indent, and the first line that is not
+blank ends every item, as a line after a blank one does, before the stack is
+read. Put in by hand, it changed nothing on the 60,000 documents and failed
+no text or Markdown test. Every way of writing an empty stack makes it, so
+its line is marked, the sixth, and nothing else is made there.
 
 **The `break` stays 94.5.**
