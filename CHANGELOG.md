@@ -88,6 +88,14 @@ copies a module names the spec-core commit in its own changelog.
   `FORCE_COLOR`, `FORCE_COLOR=0` off and any other value on, `TERM=dumb` off
   unless colour is forced, and `CI` not read for colour. The adopting guide
   lists the refusal under exit `2`.
+- ADR-0009 promises, from each tool's first release after round 27, two
+  consecutive minors with its JSON fields and exit codes unchanged, and from
+  then on a new rule first as a warning or behind an option; and the user its
+  1.0 asks for is someone other than the tools' author, in any organization.
+  Each tool's release can say both.
+- The concepts guide says what a ruling proves, that the agent did not sign
+  it, and what it does not: it is not two-person review or separation of
+  duties, and nothing checks that the signer is not the brief's author.
 
 ### Changed since ffe9b8a
 
