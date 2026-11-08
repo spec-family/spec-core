@@ -15,13 +15,14 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { minimatch } from 'minimatch';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BaseSequencer, type InlineConfig, resolveConfig, type TestSpecification, type Vitest } from 'vitest/node';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { BaseSequencer, type TestSpecification, type Vitest } from 'vitest/node';
 
 import {
   ASSIGNED,
@@ -361,44 +362,52 @@ const mutationSuite = async () =>
   (await import(pathToFileURL(join(ROOT, 'vitest.mutation.config.ts')).href)) as typeof import('../vitest.mutation.config.js');
 
 describe("the order a mutant's test files run in", () => {
-  // What a worker knows of each file after it last ran it, by the key vitest
-  // files it under, and the size of each file vitest finds: the long files
-  // here are small, and the largest are quick.
+  // What a worker's cache holds for each file after it last ran it, and the
+  // size of each file on the disk, which vitest 5 reads where a file has no
+  // time: the long files here are small, and the largest are quick.
   type Timed = Record<string, { duration: number; failed: boolean }>;
   const TIMED: Timed = {
-    ':tests/markdown/linear.test.ts': { duration: 4_300, failed: false },
-    ':tests/markdown/properties.test.ts': { duration: 1_800, failed: false },
-    ':tests/markdown/links.test.ts': { duration: 35, failed: false },
-    ':tests/path.test.ts': { duration: 6, failed: false },
+    'tests/markdown/linear.test.ts': { duration: 4_300, failed: false },
+    'tests/markdown/properties.test.ts': { duration: 1_800, failed: false },
+    'tests/markdown/links.test.ts': { duration: 35, failed: false },
+    'tests/path.test.ts': { duration: 6, failed: false },
   };
   const SIZES: Record<string, number> = {
-    ':tests/markdown/linear.test.ts': 8_343,
-    ':tests/markdown/properties.test.ts': 9_159,
-    ':tests/markdown/links.test.ts': 25_697,
-    ':tests/path.test.ts': 4_529,
-    ':tests/pattern/oracle.test.ts': 10_257,
-    ':tests/pattern/glob.test.ts': 57_581,
+    'tests/markdown/linear.test.ts': 8_343,
+    'tests/markdown/properties.test.ts': 9_159,
+    'tests/markdown/links.test.ts': 25_697,
+    'tests/path.test.ts': 4_529,
+    'tests/pattern/oracle.test.ts': 10_257,
+    'tests/pattern/glob.test.ts': 57_581,
   };
-  const FOUND = Object.keys(SIZES).map((key) => key.slice(1));
+  const FOUND = Object.keys(SIZES);
+
+  // Files of those sizes, where both sequencers look for them.
+  const WORK = mkdtempSync(join(tmpdir(), 'spec-core-sequencer-')).replaceAll('\\', '/');
+  for (const [file, size] of Object.entries(SIZES)) {
+    mkdirSync(dirname(join(WORK, file)), { recursive: true });
+    writeFileSync(join(WORK, file), 'x'.repeat(size));
+  }
+  afterAll(() => rmSync(WORK, { recursive: true, force: true }));
 
   const worker = (timed: Timed, found = FOUND) => {
     const asked: string[] = [];
     const ctx = {
-      config: { root: '/work/spec-core' },
+      config: { root: WORK },
       cache: {
-        getFileTestResults: (key: string) => {
+        getTestSpecificationResult: (file: TestSpecification) => {
+          const key = file.moduleId.slice(WORK.length + 1);
           asked.push(key);
           return timed[key];
         },
-        getFileStats: (key: string) => (key in SIZES ? { size: SIZES[key]! } : undefined),
       },
     } as unknown as Vitest;
     const files = found.map(
-      (file) => ({ moduleId: `/work/spec-core/${file}`, project: { name: '', config: { isolate: true, sequence: { groupOrder: 0 } } } }) as unknown as TestSpecification,
+      (file) => ({ moduleId: `${WORK}/${file}`, project: { name: '', config: { isolate: true, sequence: { groupOrder: 0 } } } }) as unknown as TestSpecification,
     );
     return { ctx, files, asked };
   };
-  const names = (files: TestSpecification[]) => files.map((file) => file.moduleId.slice('/work/spec-core/tests/'.length).replace('.test.ts', ''));
+  const names = (files: TestSpecification[]) => files.map((file) => file.moduleId.slice(`${WORK}/tests/`.length).replace('.test.ts', ''));
   // The sweep's order, of the files as found and as found backwards: an order
   // that only kept what it was given would pass one of the two.
   const ours = async (timed: Timed, found = FOUND) => {
@@ -418,15 +427,15 @@ describe("the order a mutant's test files run in", () => {
   });
 
   it('runs a file that failed when the worker last ran it before any that passed, however long it takes, and of two that failed the quicker', async () => {
-    const one = { ...TIMED, ':tests/markdown/linear.test.ts': { duration: 4_300, failed: true } };
+    const one = { ...TIMED, 'tests/markdown/linear.test.ts': { duration: 4_300, failed: true } };
     expect((await ours(one)).order).toEqual(['markdown/linear', 'path', 'markdown/links', 'markdown/properties', 'pattern/glob', 'pattern/oracle']);
-    const two = { ...one, ':tests/markdown/links.test.ts': { duration: 35, failed: true } };
+    const two = { ...one, 'tests/markdown/links.test.ts': { duration: 35, failed: true } };
     expect((await ours(two)).order).toEqual(['markdown/links', 'markdown/linear', 'path', 'markdown/properties', 'pattern/glob', 'pattern/oracle']);
   });
 
-  it('orders the files a worker has timed as vitest would but for the quickest first, and reads what vitest recorded by the keys vitest reads', async () => {
-    const failed = { ...TIMED, ':tests/markdown/links.test.ts': { duration: 35, failed: true } };
-    const timed = Object.keys(TIMED).map((key) => key.slice(1));
+  it('orders the files a worker has timed as vitest would but for the quickest first, and asks the cache what vitest asks it', async () => {
+    const failed = { ...TIMED, 'tests/markdown/links.test.ts': { duration: 35, failed: true } };
+    const timed = Object.keys(TIMED);
 
     // Vitest's own: the failed file, then the longest, which is why a mutant
     // that only a unit test kills waited for the long files.
@@ -435,8 +444,8 @@ describe("the order a mutant's test files run in", () => {
     const sweep = await ours(failed, timed);
     expect(sweep.order).toEqual(['markdown/links', 'path', 'markdown/properties', 'markdown/linear']);
 
-    // A key vitest stopped using would find nothing, every file would count
-    // as never run, and the order would quietly be by size.
+    // A question vitest's cache stopped answering would find nothing, every
+    // file would count as never run, and the order would quietly be by size.
     expect(new Set(sweep.asked)).toEqual(new Set(vitest.asked));
     expect(new Set(sweep.asked)).toEqual(new Set(Object.keys(TIMED)));
   });
@@ -454,18 +463,22 @@ describe('this repository', () => {
 
   /**
    * The reporters vitest gives a run of a suite on a GitHub runner, where
-   * every step has GITHUB_ACTIONS set to true, resolved by vitest itself, as
-   * Stryker's runner has it resolve them: it names none of its own.
+   * every step has GITHUB_ACTIONS set to true, resolved by vitest itself from
+   * the configuration file, as Stryker's runner has it resolve them: it names
+   * none of its own. Vitest 5 reads the variable once, when it is first
+   * imported, so the suite is resolved in a process started with it.
    */
-  async function onARunner(name: string): Promise<string[]> {
-    const suite = await load<{ test?: InlineConfig }>(name);
-    vi.stubEnv('GITHUB_ACTIONS', 'true');
-    try {
-      const { vitestConfig } = await resolveConfig({ ...suite.test, config: false, root: ROOT });
-      return vitestConfig.reporters.map((reporter) => (Array.isArray(reporter) ? String(reporter[0]) : 'inline'));
-    } finally {
-      vi.unstubAllEnvs();
-    }
+  function onARunner(name: string): string[] {
+    const resolve = [
+      "import { resolveConfig } from 'vitest/node';",
+      `const { test } = await resolveConfig({ root: ${JSON.stringify(ROOT)}, config: ${JSON.stringify(join(ROOT, name))} });`,
+      "const names = test.reporters.map((reporter) => (Array.isArray(reporter) ? String(reporter[0]) : 'inline'));",
+      // On a line of its own, after anything vitest prints on the way.
+      "process.stdout.write('\\nreporters ' + JSON.stringify(names));",
+    ].join('\n');
+    const env = { ...process.env, GITHUB_ACTIONS: 'true' };
+    const out = execFileSync(process.execPath, ['--input-type=module', '-e', resolve], { cwd: ROOT, env, encoding: 'utf8' });
+    return JSON.parse(out.slice(out.lastIndexOf('\nreporters ') + '\nreporters '.length)) as string[];
   }
 
   // Stryker's reading of `mutate`, written again here with minimatch, the
@@ -532,10 +545,10 @@ describe('this repository', () => {
     // runner, and it appends a summary of every run to the step's own: about
     // 1,700 of them in the largest shard of main's sweep of 89bcf7f, where
     // GitHub uploads 1MiB a step (vitest.mutation.config.ts).
-    expect(await onARunner('vitest.mutation.config.ts')).toEqual(['default']);
+    expect(onARunner('vitest.mutation.config.ts')).toEqual(['default']);
     // The suite `npm test` runs keeps the annotations and the summary vitest
     // gives a run on a runner.
-    expect(await onARunner('vitest.config.ts')).toContain('github-actions');
+    expect(onARunner('vitest.config.ts')).toContain('github-actions');
   });
 
   it('gives a shard its own files, its own report, and no gate', async () => {
