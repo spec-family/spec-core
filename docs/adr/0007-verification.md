@@ -54,6 +54,17 @@ by hand before it is read as a survivor: under one that stops a test file
 loading no test fails, and Stryker counts no failure as survived. Such a
 mutant is killed by a test that loads the smallest thing that still meets
 it and fails in a test's body. The record below has the measurements.
+*Amended 2026-11-08*: an equivalent mutant whose verdict a clock decides,
+a timeout on a slow runner and a survivor on a fast one, is not left to the
+clock. Its line is written so that no mutant of it is equivalent where some
+way of writing it does that, and where every way makes one, it is marked
+for the sweep to leave out: `// Stryker disable next-line <Mutator>: <why>`
+over it, the next line only, the mutators by name, and the reason. A mark
+leaves out every mutant of those mutators on the line, so one goes only on
+a line where the others are killed by another mutant beside them as well.
+`tests/mutation-unmeasured.test.ts` holds each mark to that form and to a
+mutant Stryker makes under it, and counts the marks. The record below has
+the measurements.
 
 **Thresholds are measurements, never targets.** The first full sweep sets the
 `break` a little under what it measured; it moves up with the measurement and
@@ -935,3 +946,80 @@ the source for the sweep to leave out, which every tool would copy; this
 entry decides neither.
 
 **The `break` stays 94.5.**
+
+### 2026-11-08: what a clock decided, written out or marked
+
+Five sweeps of one source - main's at a5fc27e and at 8b0c22e, runs
+42450344852 and 42455582424, and those of pull requests 57, 58 and 59, runs
+42472014545, 42472170313 and 42472354689, the first of them on vitest 5 -
+had sixteen mutants time out in some and survive the rest. Nine are the
+nine of the entry of 2026-10-24. Five more are in `src/text/lines.ts`, at
+the same two tests of `endOf` and at the clamp above them: `true` at 77,
+`true` and `end >= start` at 78, and `line <= 1` and `line >= lineCount`
+at 65. The last two are `src/markdown/scan.ts` 221, the loop that makes one
+shape a line made to make one more, and `src/pattern/charset.ts` 42, the
+mark of the separator made `false` in the set of the one character `/`.
+Each is equivalent as the comment at its code said, and each runs every test
+that covers it, up to 282, which a sweep on a slow runner does not finish
+within the clock it sets.
+
+**Written so that no mutant is equivalent**, where a way of writing the line
+does that:
+
+- `lines.ts`: each clamp, a line's and an offset's in `positionAt`, is a
+  `Math.max` inside a `Math.min`, whose only mutants swap the two and answer
+  wrongly. `endOf` takes off each terminator character with no test before
+  it and returns the larger of the line's start and what is left, which
+  keeps its promise not to reach past the line's start without a test that
+  never decides. Two stable survivors go with the six that moved: the
+  clamp in `positionAt` made `<=` and `>=`.
+- `scan.ts`: the two loops that ended the list items right of a line, each
+  testing the stack's length that `undefined > indent` already answered,
+  are one `endRightOf`, which keeps the items up to the last one at or left
+  of the line (`findLastIndex`). Two moved, and two at the second loop
+  survived every sweep.
+- `links.ts`: a link's text is one record, the `]` that ends it and where
+  the walk resumes, or `null`, where two numbers stood with -1 for none. The
+  first value of `resume`, which nothing read, and the two tests of
+  `textEnd >= 0`, whose `> 0` no 0 told apart, are gone; the second of them
+  survived every sweep. A paragraph's run asks `continues` before it asks
+  whether the next line is a paragraph's, so no line past the last is asked
+  about, and the loop over the lines made to take one step more reads a line
+  that is not there and fails.
+
+`charset.ts` keeps its line, and `tests/pattern/charset.test.ts` holds the
+set of one character to what the module says of it for any point: of `/`,
+which no glob literal is, it is the separator's and accepts `/`, and of no
+other character does it.
+
+**Marked**, where every way of writing the line makes one, five times: in
+`links.ts` the two walks that end at `to` (`at <= to`), the test that leaves
+a link's text (`at > end`, which leaves at the `]` or one step past it, and
+resumes at the same place), and the tests of a blank or a code line that
+only shape a paragraph's run (`true`); in `scan.ts` the loop over the lines'
+shapes (`i <= count`). Each mark leaves out the other mutants of its mutator
+on its line as well, six, each killed and each with another mutant beside it
+that is killed too: `at >= to` twice and `i >= count`, beside `false` for
+the same loop; `false` for the paragraph's tests, beside `line.blank` for
+`!line.blank`; and `inside === null` and `at < inside.end`, beside `true`
+and `false` for each half of the same test.
+
+**What shows the answers unchanged.**
+
+- `tests/text.test.ts` reads the line table of each of the 3,280 texts of
+  up to seven characters of `a`, `\r` and `\n`, at every line from -1 to two
+  past the last and every offset from -2 to two past the end, against a
+  reading of the lines by a regular expression. Main's `lines.ts` and this
+  one pass it alike. `positionAt(-0)` alone differs, answering offset 0
+  where main answered -0.
+- Main's `markdown` and `text` modules and these were run side by side on
+  60,000 documents: 20,000 generated, half by the corpus of
+  `tests/markdown/corpus.ts` and half a soup of the characters these readers
+  act on, each as written, with `\r\n`, and without a final line ending.
+  Every scan was the same, its lines, blocks, masks, headings, list items,
+  links and tables.
+- Each of the five marked mutants, put into this source by hand and run on
+  the same 60,000 documents, changed nothing.
+- 38 mutants of the lines written again, put in by hand one at a time and
+  run against the text and Markdown tests with `--bail=1`, as Stryker runs
+  one, each failed a test.

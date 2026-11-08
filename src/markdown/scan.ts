@@ -216,8 +216,8 @@ function scanCore(text: string, index: LineIndex, frontLines: number): Core {
     lines.push(record(i, start, end, start, text.slice(start, end), 0, { frontMatter: true, code: false, html: false }));
   }
 
-  // One shape too many, for a line past the last, would never be read.
   const shapes: Shape[] = [];
+  // Stryker disable next-line EqualityOperator: one shape too many, for a line past the last, would never be read.
   for (let i = frontLines; i < count; i += 1) {
     const start = index.lineStart(i + 1);
     const end = index.lineEnd(i + 1);
@@ -365,9 +365,14 @@ function scanCore(text: string, index: LineIndex, frontLines: number): Core {
   let indented: Mutable<Block> | null = null;
   let previousBlank = true;
   // The content column of each list item open around the line, innermost last.
-  // Each loop that pops it tests its length first, which says what is meant;
-  // without the test it stops all the same, `undefined > indent` being false.
   const items: number[] = [];
+  // Ends the items whose content starts right of `indent`, from the innermost
+  // out: those after the last that starts at or left of it, all where none
+  // does. A loop that popped them would test the stack's length to say so
+  // and stop all the same without the test, `undefined > indent` being false.
+  const endRightOf = (indent: number): void => {
+    items.length = items.findLastIndex((column) => column <= indent) + 1;
+  };
   let pos = 0;
 
   const openBlock = (kind: BlockKind, i: number, info: string, tag: string | null): Mutable<Block> => {
@@ -423,9 +428,7 @@ function scanCore(text: string, index: LineIndex, frontLines: number): Core {
     }
 
     // After a blank line, a line left of an item's content is outside it.
-    if (!shape.blank && previousBlank) {
-      while (items.length > 0 && items[items.length - 1]! > shape.indent) items.pop();
-    }
+    if (!shape.blank && previousBlank) endRightOf(shape.indent);
     // Indented code: four columns past the item the line is in, or past the
     // margin outside a list, and never interrupting a paragraph. Four columns
     // inside an item are its text, not code.
@@ -466,7 +469,7 @@ function scanCore(text: string, index: LineIndex, frontLines: number): Core {
     const marker = listMarker(content);
     if (marker !== null) {
       // A marker left of an item's content starts a sibling or an outer item.
-      while (items.length > 0 && items[items.length - 1]! > shape.indent) items.pop();
+      endRightOf(shape.indent);
       items.push(itemColumn(shape.indent, marker));
     }
     // A heading ends a list whatever its indentation.

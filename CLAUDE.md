@@ -59,6 +59,13 @@ anything else, and the sweep's merge job does too
 (`scripts/mutation-unmeasured.mjs`;
 [ADR-0007](docs/adr/0007-verification.md), 2026-10-12).
 
+An equivalent mutant is not left for the clock to call a timeout on one
+runner and a survivor on another. Write its line so that no mutant of it is
+equivalent; where every way of writing it makes one, mark it
+`// Stryker disable next-line <Mutator>: <why>`. The same test holds each
+mark to that form and to a mutant under it, and counts them
+([ADR-0007](docs/adr/0007-verification.md), 2026-11-08).
+
 Vitest stays on 4 while Stryker's runner runs no test against a mutant on 5,
 where the sweep reads 4%: Dependabot proposes no major of it,
 `tests/boundaries.test.ts` fails one made by hand, and

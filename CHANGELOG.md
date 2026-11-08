@@ -31,6 +31,16 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Changed
 
+- **`links.ts` and `scan.ts` in `markdown` and `lines.ts` in `text` change
+  in their text and not in what they answer.** The lines whose mutants a
+  sweep told apart only by its clock are written again, or marked for the
+  sweep to leave out where every way of writing them makes an equivalent
+  mutant (ADR-0007, amended 2026-11-08), and the header of `links.ts` says
+  what a paragraph's end is where the text has no final line ending. Each
+  of the three files has a new hash: a tool copies them at its next change,
+  and its vendor test, which holds the copy it has, does not break.
+  Upgrading: nothing to change.
+
 - **The family lives in the spec-family organization, and its packages are
   `@spec-family/<name>`.** The five repositories moved on 2026-10-26 from
   DescentVTT to spec-family under the names they had, and the tools are

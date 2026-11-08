@@ -95,6 +95,9 @@ interface Made {
   mutatorName: string;
   replacement: string;
   location: { start: { line: number; column: number }; end: { line: number; column: number } };
+  /** `Ignored` for a mutant a mark leaves out, with the mark's reason. */
+  status?: string;
+  statusReason?: string;
 }
 
 /** Stryker's own instrumenter, found as Stryker finds it, and the mutants it makes of one source. */
@@ -345,4 +348,49 @@ describe('this repository', () => {
     expect(count).toBeGreaterThan(merge);
     expect(mutationSuite.test?.exclude).toContain('tests/mutation-unmeasured.test.ts');
   });
+});
+
+/**
+ * A mark, `// Stryker disable next-line <Mutator>: <why>`, has the sweep leave
+ * the mutants of the mutators it names on the line under it out, reported as
+ * ignored and in no score. One is written only where every way of writing
+ * the line makes an equivalent mutant: a walk whose one step more reads a
+ * character it does not act on, a test whose only work is to shape the work
+ * (ADR-0007, 2026-11-08). So each is held to that form, each must leave out a
+ * mutant that Stryker makes there, and the marks are counted, so that one
+ * joins on purpose.
+ */
+describe('the marks that leave a mutant out of the sweep', () => {
+  const MARKED = 5;
+  const MARK = /\bStryker\s+(?:disable|restore)\b/i;
+  const FORM = /^\/\/ Stryker disable next-line [A-Z][A-Za-z]+(?:,[A-Z][A-Za-z]+)*: \S/;
+
+  const sources = async (): Promise<Record<string, string>> => {
+    const { default: stryker } = (await import(pathToFileURL(path.join(ROOT, 'stryker.config.mjs')).href)) as { default: { mutate: string[] } };
+    return treeSources(stryker.mutate, ROOT);
+  };
+  /** Each mark in a source, 0-based by the line it stands on, as the instrumenter counts. */
+  const marksOf = (source: string): { line: number; text: string }[] =>
+    source.split('\n').flatMap((text, line) => (MARK.test(text) ? [{ line, text: text.trim() }] : []));
+
+  it('are of one form: the next line only, its mutators by name, and why', async () => {
+    const all = Object.entries(await sources()).flatMap(([file, source]) => marksOf(source).map((mark) => `${file}:${mark.line + 1}: ${mark.text}`));
+    expect(all.filter((mark) => !FORM.test(mark.slice(mark.indexOf(': ') + 2)))).toEqual([]);
+    expect(all).toHaveLength(MARKED);
+  });
+
+  it('each leave out a mutant Stryker makes on the line under them, and nothing elsewhere', async () => {
+    const instrument = await instrumenter();
+    for (const [file, source] of Object.entries(await sources())) {
+      const marks = marksOf(source);
+      const made = await instrument(source);
+      const ignored = made.filter((mutant) => mutant.status === 'Ignored');
+      expect(ignored.filter((mutant) => !marks.some((mark) => mark.line + 1 === mutant.location.start.line)).map(place), file).toEqual([]);
+      for (const mark of marks) {
+        const left = ignored.filter((mutant) => mutant.location.start.line === mark.line + 1);
+        expect(left.length, `${file}:${mark.line + 1}`).toBeGreaterThan(0);
+        expect(new Set(left.map((mutant) => mutant.statusReason)).size, `${file}:${mark.line + 1}`).toBe(1);
+      }
+    }
+  }, 60_000);
 });

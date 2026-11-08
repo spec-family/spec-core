@@ -21,10 +21,14 @@
  * no bracket searches the text again for its partner. A document of nothing
  * but brackets costs its length.
  *
- * A paragraph ends at `to`, and the character there is a line terminator,
- * which no loop here acts on; nor is any lookup made at the first three
- * offsets of a paragraph, before the shortest `[](` could end. Mutants that
- * move a bound onto those places change no answer, and are equivalent.
+ * A paragraph ends at `to`, the end of its last line: the line terminator
+ * there, or the end of the text where the last line has none, past which a
+ * read finds no character. No loop here acts on either, so a walk that took
+ * one step more would read the same, and the two walks that end at `to` are
+ * marked for the sweep to leave that step out (ADR-0007, 2026-11-08). Nor is
+ * any lookup made at the first three offsets of a paragraph, before the
+ * shortest `[](` could end; a mutant that moves a bound onto those places
+ * changes no answer.
  */
 
 import { inRanges, mergeRanges } from '../text/index.js';
@@ -196,6 +200,7 @@ function pairBrackets(structure: string, from: number, to: number): Brackets {
   const { pairs } = brackets;
   const open: { readonly at: number; readonly before: number }[] = [];
   let escaped = -1;
+  // Stryker disable next-line EqualityOperator: a paragraph's walk to `to` reads nothing it acts on there (the header).
   for (let at = from; at < to; at += 1) {
     const ch = structure.charCodeAt(at);
     if (ch === BACKSLASH) {
@@ -293,21 +298,22 @@ function readBrackets(layout: Layout, definitions: ReadonlyMap<string, Definitio
 
   // A blank or code line let into a paragraph would bring only characters the
   // structure mask blanks, so those two tests shape the runs and change no
-  // link. A definition's line is no paragraph's: it holds a label, a
-  // destination and a title, none of them a link, and the text after it is a
-  // paragraph of its own, whose brackets pair with nothing before it. Past
-  // the last line there is no line, and `continues` holds nothing there, so
-  // no run reaches past it: the loop below could take one step more, and the
-  // test for a line that is not there could go.
+  // link, and are marked for the sweep to leave out (ADR-0007, 2026-11-08). A
+  // definition's line is no paragraph's: it holds a label, a destination and
+  // a title, none of them a link, and the text after it is a paragraph of its
+  // own, whose brackets pair with nothing before it. Only a line that exists
+  // is asked about: `continues` holds no line past the last, and is asked
+  // first.
   const inParagraph = (i: number): boolean => {
-    const line = lines[i];
-    return line !== undefined && isMarkdown(line) && !line.blank && !defined.has(i + 1);
+    const line = lines[i]!;
+    // Stryker disable next-line ConditionalExpression: a blank or code line brings only characters the mask blanks.
+    return isMarkdown(line) && !line.blank && !defined.has(i + 1);
   };
 
   for (let first = 0; first < lines.length; first += 1) {
     if (!inParagraph(first)) continue;
     let last = first;
-    while (inParagraph(last + 1) && continues.has(last + 2)) last += 1;
+    while (continues.has(last + 2) && inParagraph(last + 1)) last += 1;
     const from = (lines[first] as ScannedLine).start;
     const to = (lines[last] as ScannedLine).end;
     const brackets = pairBrackets(structure, from, to);
@@ -461,21 +467,19 @@ function readBrackets(layout: Layout, definitions: ReadonlyMap<string, Definitio
     }
 
     let at = from;
-    // Inside a link's text, up to its `]`, where CommonMark reads an image -
-    // a badge wrapped in a link - but no other link; then on past the link.
-    // `textEnd` is -1 or a `]` that closes a `[`, so never 0, and the `]` is
-    // read as no link. Leaving one step later, past it, resumes at the same
-    // place, or ends the paragraph where a shortcut link ended it anyway: the
-    // test below reads the same with `textEnd > 0` or `at > textEnd`, and so
-    // does the one further into the loop with `textEnd > 0`. `resume` is read
-    // only while `textEnd` is set, and the two are set together, so its first
-    // value is never read.
-    let textEnd = -1;
-    let resume = -1;
+    // Inside a link's text, up to the `]` that ends it, where CommonMark reads
+    // an image - a badge wrapped in a link - but no other link; then on past
+    // the link, from where it ends. The `]` is read as no link, so leaving one
+    // step later, past it, resumes at the same place, or ends the paragraph
+    // where a shortcut link ended it anyway, and that test is marked for the
+    // sweep to leave out (ADR-0007, 2026-11-08).
+    let inside: { readonly end: number; readonly resume: number } | null = null;
+    // Stryker disable next-line EqualityOperator: a paragraph's walk to `to` reads nothing it acts on there (the header).
     while (at < to) {
-      if (textEnd >= 0 && at >= textEnd) {
-        at = resume;
-        textEnd = -1;
+      // Stryker disable next-line EqualityOperator: leaving at the `]` or one step past it resumes at the same place.
+      if (inside !== null && at >= inside.end) {
+        at = inside.resume;
+        inside = null;
         continue;
       }
       const ch = structure.charCodeAt(at);
@@ -491,10 +495,10 @@ function readBrackets(layout: Layout, definitions: ReadonlyMap<string, Definitio
       const image = brackets.images.has(at);
       const start = image ? at - 1 : at;
       const link = wiki(at, start, image, line) ?? bracket(at, start, image, line);
-      if (textEnd >= 0) {
+      if (inside !== null) {
         // An image that closes inside the text; its own text is alt text, and
         // holds nothing a reader follows.
-        if (link !== null && link.image && link.form !== 'wiki' && link.end <= textEnd) {
+        if (link !== null && link.image && link.form !== 'wiki' && link.end <= inside.end) {
           out.push(link);
           at = link.end;
         } else {
@@ -505,8 +509,7 @@ function readBrackets(layout: Layout, definitions: ReadonlyMap<string, Definitio
       } else {
         out.push(link);
         if (!link.image && link.form !== 'wiki') {
-          textEnd = pairs.get(at) as number;
-          resume = link.end;
+          inside = { end: pairs.get(at)!, resume: link.end };
           // Into the text. A step back instead reads the character before
           // the `[`, which opens nothing there - it opened no link before
           // this one, or it is escaped - and comes back here.
