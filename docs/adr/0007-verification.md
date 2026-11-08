@@ -996,7 +996,8 @@ other character does it.
 `links.ts` the two walks that end at `to` (`at <= to`), the test that leaves
 a link's text (`at > end`, which leaves at the `]` or one step past it, and
 resumes at the same place), and the tests of a blank or a code line that
-only shape a paragraph's run (`true`); in `scan.ts` the loop over the lines'
+only shape a paragraph's run (`true`, and `||` between the two), on a line
+of their own; in `scan.ts` the loop over the lines'
 shapes (`i <= count`). Each mark leaves out the other mutants of its mutator
 on its line as well, six, each killed and each with another mutant beside it
 that is killed too: `at >= to` twice and `i >= count`, beside `false` for
@@ -1023,3 +1024,19 @@ and `false` for each half of the same test.
 - 38 mutants of the lines written again, put in by hand one at a time and
   run against the text and Markdown tests with `--bail=1`, as Stryker runs
   one, each failed a test.
+
+**What the sweep read.** The pull request's sweep, run 42476211409, read
+96.64% over 5,919 mutants that count, with 12 ignored by the marks: 5,492
+killed, 228 timed out, 192 survived and 7 without coverage, where main's
+last read 96.45% over 5,972. Of the sixteen, none timed out or survived:
+each was made no more, killed, or ignored. It found one equivalent the
+rewrite had made. With `line !== undefined` gone from the paragraph's test,
+`isMarkdown(line) || !line.blank` survived, where under the old chain the
+same mutant read a line past the last and failed. The two tests that only
+shape a run now stand on a line of their own, after the test of a
+definition's line, and the mark there names `LogicalOperator` as well. Put
+in by hand and run on the 60,000 documents, that mutant and `true` for the
+line changed nothing, and the four mutants of the test of a definition's
+line, put in the same way, each failed a test.
+
+**The `break` stays 94.5.**

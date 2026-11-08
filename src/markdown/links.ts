@@ -296,18 +296,19 @@ function readBrackets(layout: Layout, definitions: ReadonlyMap<string, Definitio
   const lookup = (from: number, to: number): Definition | undefined =>
     to - from > MAX_LABEL ? undefined : definitions.get(normalizeLabel(text.slice(from, to)));
 
-  // A blank or code line let into a paragraph would bring only characters the
-  // structure mask blanks, so those two tests shape the runs and change no
-  // link, and are marked for the sweep to leave out (ADR-0007, 2026-11-08). A
-  // definition's line is no paragraph's: it holds a label, a destination and
-  // a title, none of them a link, and the text after it is a paragraph of its
-  // own, whose brackets pair with nothing before it. Only a line that exists
-  // is asked about: `continues` holds no line past the last, and is asked
-  // first.
+  // A definition's line is no paragraph's: it holds a label, a destination
+  // and a title, none of them a link, and the text after it is a paragraph of
+  // its own, whose brackets pair with nothing before it. A blank or code line
+  // let into a paragraph would bring only characters the structure mask
+  // blanks, so the two tests of the last line shape the runs and change no
+  // link, and stand alone there, marked for the sweep to leave out (ADR-0007,
+  // 2026-11-08). Only a line that exists is asked about: `continues` holds no
+  // line past the last, and is asked first.
   const inParagraph = (i: number): boolean => {
+    if (defined.has(i + 1)) return false;
     const line = lines[i]!;
-    // Stryker disable next-line ConditionalExpression: a blank or code line brings only characters the mask blanks.
-    return isMarkdown(line) && !line.blank && !defined.has(i + 1);
+    // Stryker disable next-line ConditionalExpression,LogicalOperator: a blank or code line brings only characters the mask blanks.
+    return isMarkdown(line) && !line.blank;
   };
 
   for (let first = 0; first < lines.length; first += 1) {
