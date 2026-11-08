@@ -42,22 +42,10 @@ export function fastestInTurn(runs: number, ...work: (() => unknown)[]): number[
 }
 
 /**
- * For work too quick to time once: the time one run takes, in milliseconds,
- * over as many runs as fill `span` milliseconds, the fastest of a few such
- * stretches of each piece of work, taken in turn. A stretch holds at least
- * one run, so work grown to take seconds is timed once and not thousands of
- * times over.
+ * The time one run takes, in milliseconds, over as many runs as fill `span`
+ * milliseconds. A stretch holds at least one run, so work grown to take
+ * seconds is timed once and not thousands of times over.
  */
-export function perRunInTurn(stretches: number, span: number, ...work: (() => unknown)[]): number[] {
-  const best = work.map(() => Number.POSITIVE_INFINITY);
-  for (let i = 0; i < stretches; i += 1) {
-    work.forEach((run, k) => {
-      best[k] = Math.min(best[k] as number, perRun(span, run));
-    });
-  }
-  return best;
-}
-
 function perRun(span: number, run: () => unknown): number {
   let runs = 0;
   let elapsed = 0;
