@@ -95,6 +95,9 @@ interface Made {
   mutatorName: string;
   replacement: string;
   location: { start: { line: number; column: number }; end: { line: number; column: number } };
+  /** `Ignored` for a mutant a mark leaves out, with the mark's reason. */
+  status?: string;
+  statusReason?: string;
 }
 
 /** Stryker's own instrumenter, found as Stryker finds it, and the mutants it makes of one source. */
@@ -345,4 +348,66 @@ describe('this repository', () => {
     expect(count).toBeGreaterThan(merge);
     expect(mutationSuite.test?.exclude).toContain('tests/mutation-unmeasured.test.ts');
   });
+});
+
+/**
+ * A mark, `// Stryker disable next-line <Mutator>: <why>`, has the sweep leave
+ * the mutants of the mutators it names on the line under it out, reported as
+ * ignored and in no score. One is written only where every way of writing
+ * the line makes an equivalent mutant: a test whose only work is to shape
+ * the work, a first value nothing reads (ADR-0007, 2026-11-08). It leaves out
+ * every mutant of its mutators on its line, killed ones too, so the line is
+ * written to make none but the equivalent ones. So each is held to that form,
+ * each must leave out a mutant that Stryker makes there, what each file's
+ * marks leave out is listed, so that a killed mutant joining them fails here,
+ * and the marks are counted, so that one joins on purpose.
+ */
+describe('the marks that leave a mutant out of the sweep', () => {
+  const MARKED = 2;
+  const MARK = /\bStryker\s+(?:disable|restore)\b/i;
+  const FORM = /^\/\/ Stryker disable next-line [A-Z][A-Za-z]+(?:,[A-Z][A-Za-z]+)*: \S/;
+  // Each file's marks, by what they leave out: the mutator and its
+  // replacement, every one equivalent.
+  const LEFT_OUT: Record<string, string[]> = {
+    'src/markdown/links.ts': ['ConditionalExpression: true', 'LogicalOperator: isMarkdown(line) || !line.blank'],
+    'src/markdown/scan.ts': ['ArrayDeclaration: ["Stryker was here"]'],
+  };
+  // A replacement as Stryker prints it carries the mark above the node.
+  const plain = (code: string): string =>
+    code
+      .replace(/\/\/[^\n]*\n/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const sources = async (): Promise<Record<string, string>> => {
+    const { default: stryker } = (await import(pathToFileURL(path.join(ROOT, 'stryker.config.mjs')).href)) as { default: { mutate: string[] } };
+    return treeSources(stryker.mutate, ROOT);
+  };
+  /** Each mark in a source, 0-based by the line it stands on, as the instrumenter counts. */
+  const marksOf = (source: string): { line: number; text: string }[] =>
+    source.split('\n').flatMap((text, line) => (MARK.test(text) ? [{ line, text: text.trim() }] : []));
+
+  it('are of one form: the next line only, its mutators by name, and why', async () => {
+    const all = Object.entries(await sources()).flatMap(([file, source]) => marksOf(source).map((mark) => `${file}:${mark.line + 1}: ${mark.text}`));
+    expect(all.filter((mark) => !FORM.test(mark.slice(mark.indexOf(': ') + 2)))).toEqual([]);
+    expect(all).toHaveLength(MARKED);
+  });
+
+  it('each leave out a mutant Stryker makes on the line under them, and nothing elsewhere', async () => {
+    const instrument = await instrumenter();
+    const all = await sources();
+    expect(Object.keys(LEFT_OUT).filter((file) => !(file in all))).toEqual([]);
+    for (const [file, source] of Object.entries(all)) {
+      const marks = marksOf(source);
+      const made = await instrument(source);
+      const ignored = made.filter((mutant) => mutant.status === 'Ignored');
+      expect(ignored.filter((mutant) => !marks.some((mark) => mark.line + 1 === mutant.location.start.line)).map(place), file).toEqual([]);
+      for (const mark of marks) {
+        const left = ignored.filter((mutant) => mutant.location.start.line === mark.line + 1);
+        expect(left.length, `${file}:${mark.line + 1}`).toBeGreaterThan(0);
+        expect(new Set(left.map((mutant) => mutant.statusReason)).size, `${file}:${mark.line + 1}`).toBe(1);
+      }
+      expect(ignored.map((mutant) => `${mutant.mutatorName}: ${plain(mutant.replacement)}`).sort(), file).toEqual([...(LEFT_OUT[file] ?? [])].sort());
+    }
+  }, 60_000);
 });

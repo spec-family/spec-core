@@ -55,6 +55,45 @@ describe('the line table', () => {
     expect(index.lineEnd(2)).toBe(3);
   });
 
+  it('answers as a reading of each line by its terminator does, for every text of up to seven characters', () => {
+    // The lines read with a regular expression and no table: each runs to
+    // the terminator after it, and a final terminator opens no line.
+    const linesOf = (text: string): { start: number; end: number }[] => {
+      const out: { start: number; end: number }[] = [];
+      let start = 0;
+      for (const match of text.matchAll(/\r\n|\r|\n/g)) {
+        out.push({ start, end: match.index });
+        start = match.index + match[0].length;
+      }
+      if (start < text.length || out.length === 0) out.push({ start, end: text.length });
+      return out;
+    };
+    const texts = [''];
+    for (let length = 1; length <= 7; length += 1) {
+      for (const text of texts.filter((t) => t.length === length - 1)) texts.push(`${text}a`, `${text}\r`, `${text}\n`);
+    }
+    const wrong: string[] = [];
+    for (const text of texts) {
+      const index = createLineIndex(text);
+      const lines = linesOf(text);
+      if (index.lineCount !== lines.length) wrong.push(`${JSON.stringify(text)}: ${index.lineCount} lines`);
+      for (let line = -1; line <= lines.length + 2; line += 1) {
+        const { start, end } = lines[line < 1 ? 0 : line > lines.length ? lines.length - 1 : line - 1]!;
+        const read = [index.lineStart(line), index.lineEnd(line), index.lineText(line)];
+        if (read.join() !== [start, end, text.slice(start, end)].join()) wrong.push(`${JSON.stringify(text)} line ${line}: ${JSON.stringify(read)}`);
+      }
+      for (let offset = -2; offset <= text.length + 2; offset += 1) {
+        const at = offset < 0 ? 0 : offset > text.length ? text.length : offset;
+        const line = lines.findLastIndex((l) => l.start <= at);
+        const expected = { offset: at, line: line + 1, column: at - lines[line]!.start + 1 };
+        const position = index.positionAt(offset);
+        if (JSON.stringify(position) !== JSON.stringify(expected)) wrong.push(`${JSON.stringify(text)} offset ${offset}: ${JSON.stringify(position)}`);
+      }
+    }
+    expect(texts).toHaveLength(3280);
+    expect(wrong).toEqual([]);
+  });
+
   it('locates by bisection at every line boundary', () => {
     const starts = [0, 4, 9];
     expect(locate(starts, 0)).toEqual({ offset: 0, line: 1, column: 1 });
