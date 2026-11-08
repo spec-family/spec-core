@@ -60,7 +60,7 @@ jsonrpc   MCP over JSON-RPC 2.0, both protocol eras, line framing
   relative-imports test; nothing new enters their toolchains; and every change
   to the core arrives in a tool as a diff someone reviews.
 - **Not published.** `private: true`. The export map already names each module
-  as a subpath (`@descent-vtt/spec-core/pattern`), so publishing later changes
+  as a subpath (`@spec-family/spec-core/pattern`), so publishing later changes
   no import in any tool. The likeliest reason to publish is `pattern` on its
   own: no matcher on npm decides whether two globs can name the same file.
 - **Mutation testing of a copy happens here, not in the tool.** Each tool
@@ -72,7 +72,7 @@ jsonrpc   MCP over JSON-RPC 2.0, both protocol eras, line framing
 
 | Option | Why not |
 | --- | --- |
-| A runtime dependency on `@descent-vtt/spec-core` | Breaks every tool's ADR-0001, adds a package to every install and a version to coordinate across four releases. |
+| A runtime dependency on `@spec-family/spec-core` | Breaks every tool's ADR-0001, adds a package to every install and a version to coordinate across four releases. |
 | Bundle at build time | A bundler as a devDependency in every tool, source maps through it, and a published tarball whose code no longer matches the repository's files. |
 | A monorepo | Four repositories' history, CI and release pipelines moved for a benefit the copy already gives. |
 | Keep three copies | They have already drifted. |
