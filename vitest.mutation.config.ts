@@ -1,12 +1,12 @@
-import { relative } from 'node:path';
+import { statSync } from 'node:fs';
 
 import { defineConfig } from 'vitest/config';
 import { BaseSequencer, type TestSpecification } from 'vitest/node';
 
 /**
- * The order a mutant's test files run in: a file that failed when the worker
- * last ran it first, as vitest has it, then the quickest first, where vitest
- * runs the longest first.
+ * The order a mutant's test files run in: a file the worker's cache records as
+ * failed first, as vitest has it, then the quickest first, where vitest runs
+ * the longest first.
  *
  * Stryker gives a mutant the files of the tests that cover it, every file for
  * a static mutant, runs them one after another in one worker and stops at the
@@ -34,16 +34,16 @@ import { BaseSequencer, type TestSpecification } from 'vitest/node';
  * between them and are the first to fail for three killed mutants in four,
  * and none of the three long ones is among the ten largest. It runs after the
  * files that have a time, the larger first, as vitest has it, and has a time
- * from then on.
+ * from then on. Vitest 5 asks its cache by a file's specification and keeps
+ * no sizes, reading them from the disk where a file has no time; so does this.
  */
 export class QuickestFirst extends BaseSequencer {
   override async sort(files: TestSpecification[]): Promise<TestSpecification[]> {
-    const { cache, config } = this.ctx;
+    const { cache } = this.ctx;
     const rank = (file: TestSpecification): [number, number] => {
-      // The key vitest's own sequencer reads its cache by; a test holds the two together.
-      const key = `${file.project.name}:${relative(config.root, file.moduleId).replaceAll('\\', '/')}`;
-      const last = cache.getFileTestResults(key);
-      if (last === undefined) return [2, -(cache.getFileStats(key)?.size ?? 0)];
+      // What vitest's own sequencer asks its cache; a test holds the two together.
+      const last = cache.getTestSpecificationResult(file);
+      if (last === undefined) return [2, -(statSync(file.moduleId, { throwIfNoEntry: false })?.size ?? 0)];
       return [last.failed ? 0 : 1, last.duration];
     };
     const ranked = files.map((file) => ({ file, rank: rank(file) }));
