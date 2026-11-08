@@ -354,16 +354,30 @@ describe('this repository', () => {
  * A mark, `// Stryker disable next-line <Mutator>: <why>`, has the sweep leave
  * the mutants of the mutators it names on the line under it out, reported as
  * ignored and in no score. One is written only where every way of writing
- * the line makes an equivalent mutant: a walk whose one step more reads a
- * character it does not act on, a test whose only work is to shape the work
- * (ADR-0007, 2026-11-08). So each is held to that form, each must leave out a
- * mutant that Stryker makes there, and the marks are counted, so that one
- * joins on purpose.
+ * the line makes an equivalent mutant: a test whose only work is to shape
+ * the work, a first value nothing reads (ADR-0007, 2026-11-08). It leaves out
+ * every mutant of its mutators on its line, killed ones too, so the line is
+ * written to make none but the equivalent ones. So each is held to that form,
+ * each must leave out a mutant that Stryker makes there, what each file's
+ * marks leave out is listed, so that a killed mutant joining them fails here,
+ * and the marks are counted, so that one joins on purpose.
  */
 describe('the marks that leave a mutant out of the sweep', () => {
-  const MARKED = 6;
+  const MARKED = 2;
   const MARK = /\bStryker\s+(?:disable|restore)\b/i;
   const FORM = /^\/\/ Stryker disable next-line [A-Z][A-Za-z]+(?:,[A-Z][A-Za-z]+)*: \S/;
+  // Each file's marks, by what they leave out: the mutator and its
+  // replacement, every one equivalent.
+  const LEFT_OUT: Record<string, string[]> = {
+    'src/markdown/links.ts': ['ConditionalExpression: true', 'LogicalOperator: isMarkdown(line) || !line.blank'],
+    'src/markdown/scan.ts': ['ArrayDeclaration: ["Stryker was here"]'],
+  };
+  // A replacement as Stryker prints it carries the mark above the node.
+  const plain = (code: string): string =>
+    code
+      .replace(/\/\/[^\n]*\n/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
   const sources = async (): Promise<Record<string, string>> => {
     const { default: stryker } = (await import(pathToFileURL(path.join(ROOT, 'stryker.config.mjs')).href)) as { default: { mutate: string[] } };
@@ -381,7 +395,9 @@ describe('the marks that leave a mutant out of the sweep', () => {
 
   it('each leave out a mutant Stryker makes on the line under them, and nothing elsewhere', async () => {
     const instrument = await instrumenter();
-    for (const [file, source] of Object.entries(await sources())) {
+    const all = await sources();
+    expect(Object.keys(LEFT_OUT).filter((file) => !(file in all))).toEqual([]);
+    for (const [file, source] of Object.entries(all)) {
       const marks = marksOf(source);
       const made = await instrument(source);
       const ignored = made.filter((mutant) => mutant.status === 'Ignored');
@@ -391,6 +407,7 @@ describe('the marks that leave a mutant out of the sweep', () => {
         expect(left.length, `${file}:${mark.line + 1}`).toBeGreaterThan(0);
         expect(new Set(left.map((mutant) => mutant.statusReason)).size, `${file}:${mark.line + 1}`).toBe(1);
       }
+      expect(ignored.map((mutant) => `${mutant.mutatorName}: ${plain(mutant.replacement)}`).sort(), file).toEqual([...(LEFT_OUT[file] ?? [])].sort());
     }
   }, 60_000);
 });

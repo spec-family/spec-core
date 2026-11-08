@@ -24,8 +24,10 @@
  * A paragraph ends at `to`, the end of its last line: the line terminator
  * there, or the end of the text where the last line has none, past which a
  * read finds no character. No loop here acts on either, so a walk that took
- * one step more would read the same, and the two walks that end at `to` are
- * marked for the sweep to leave that step out (ADR-0007, 2026-11-08). Nor is
+ * one step more would read the same. The two walks that end at `to` say
+ * "until `at` reaches `to`" as `Math.min(at, to) !== to`, where `at < to`
+ * would make `at <= to`, a mutant no input tells apart, and `Math.min` makes
+ * none that keeps the answers (ADR-0007, 2026-11-08). Nor is
  * any lookup made at the first three offsets of a paragraph, before the
  * shortest `[](` could end; a mutant that moves a bound onto those places
  * changes no answer.
@@ -200,8 +202,7 @@ function pairBrackets(structure: string, from: number, to: number): Brackets {
   const { pairs } = brackets;
   const open: { readonly at: number; readonly before: number }[] = [];
   let escaped = -1;
-  // Stryker disable next-line EqualityOperator: a paragraph's walk to `to` reads nothing it acts on there (the header).
-  for (let at = from; at < to; at += 1) {
+  for (let at = from; Math.min(at, to) !== to; at += 1) {
     const ch = structure.charCodeAt(at);
     if (ch === BACKSLASH) {
       escaped = at + 1;
@@ -301,14 +302,18 @@ function readBrackets(layout: Layout, definitions: ReadonlyMap<string, Definitio
   // its own, whose brackets pair with nothing before it. A blank or code line
   // let into a paragraph would bring only characters the structure mask
   // blanks, so the two tests of the last line shape the runs and change no
-  // link, and stand alone there, marked for the sweep to leave out (ADR-0007,
-  // 2026-11-08). Only a line that exists is asked about: `continues` holds no
-  // line past the last, and is asked first.
+  // link. They stand alone there as the right side of an `&&`, where Stryker
+  // makes of the pair only `true` and `||`, and the line is marked for the
+  // sweep to leave those two out (ADR-0007, 2026-11-08). Only a line that
+  // exists is asked about: `continues` holds no line past the last, and is
+  // asked first.
   const inParagraph = (i: number): boolean => {
-    if (defined.has(i + 1)) return false;
     const line = lines[i]!;
-    // Stryker disable next-line ConditionalExpression,LogicalOperator: a blank or code line brings only characters the mask blanks.
-    return isMarkdown(line) && !line.blank;
+    return (
+      !defined.has(i + 1) &&
+      // Stryker disable next-line ConditionalExpression,LogicalOperator: a blank or code line brings only characters the mask blanks.
+      (isMarkdown(line) && !line.blank)
+    );
   };
 
   for (let first = 0; first < lines.length; first += 1) {
@@ -472,13 +477,12 @@ function readBrackets(layout: Layout, definitions: ReadonlyMap<string, Definitio
     // an image - a badge wrapped in a link - but no other link; then on past
     // the link, from where it ends. The `]` is read as no link, so leaving one
     // step later, past it, resumes at the same place, or ends the paragraph
-    // where a shortcut link ended it anyway, and that test is marked for the
-    // sweep to leave out (ADR-0007, 2026-11-08).
+    // where a shortcut link ended it anyway. "Once `at` reaches the `]`" is
+    // therefore written with `Math.min`, as the walk's own end is (the header,
+    // ADR-0007, 2026-11-08).
     let inside: { readonly end: number; readonly resume: number } | null = null;
-    // Stryker disable next-line EqualityOperator: a paragraph's walk to `to` reads nothing it acts on there (the header).
-    while (at < to) {
-      // Stryker disable next-line EqualityOperator: leaving at the `]` or one step past it resumes at the same place.
-      if (inside !== null && at >= inside.end) {
+    while (Math.min(at, to) !== to) {
+      if (inside !== null && Math.min(at, inside.end) === inside.end) {
         at = inside.resume;
         inside = null;
         continue;

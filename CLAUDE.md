@@ -62,8 +62,10 @@ anything else, and the sweep's merge job does too
 An equivalent mutant is not left for the clock to call a timeout on one
 runner and a survivor on another. Write its line so that no mutant of it is
 equivalent; where every way of writing it makes one, mark it
-`// Stryker disable next-line <Mutator>: <why>`. The same test holds each
-mark to that form and to a mutant under it, and counts them
+`// Stryker disable next-line <Mutator>: <why>`. A mark leaves out every
+mutant of those mutators on its line, killed ones too, so write the marked
+line to make no other. The same test holds each mark to that form and to a
+mutant under it, lists what the marks leave out, and counts them
 ([ADR-0007](docs/adr/0007-verification.md), 2026-11-08).
 
 Vitest stays on 4 while Stryker's runner runs no test against a mutant on 5,

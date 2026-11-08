@@ -217,8 +217,11 @@ function scanCore(text: string, index: LineIndex, frontLines: number): Core {
   }
 
   const shapes: Shape[] = [];
-  // Stryker disable next-line EqualityOperator: one shape too many, for a line past the last, would never be read.
-  for (let i = frontLines; i < count; i += 1) {
+  // One shape too many, for a line past the last, would never be read, so
+  // `i < count` would make `i <= count`, a mutant no input tells apart;
+  // `Math.min` says "until `i` reaches `count`" with none that keeps the
+  // answers (ADR-0007, 2026-11-08).
+  for (let i = frontLines; Math.min(i, count) !== count; i += 1) {
     const start = index.lineStart(i + 1);
     const end = index.lineEnd(i + 1);
     const q = stripQuotes(text, start, Number.POSITIVE_INFINITY);

@@ -60,11 +60,14 @@ clock. Its line is written so that no mutant of it is equivalent where some
 way of writing it does that, and where every way makes one, it is marked
 for the sweep to leave out: `// Stryker disable next-line <Mutator>: <why>`
 over it, the next line only, the mutators by name, and the reason. A mark
-leaves out every mutant of those mutators on the line, so one goes only on
-a line where the others are killed by another mutant beside them as well.
-`tests/mutation-unmeasured.test.ts` holds each mark to that form and to a
-mutant Stryker makes under it, and counts the marks. The record below has
-the measurements.
+leaves out every mutant of those mutators on its line, killed ones too, so
+the marked line is written to make no other: a relational operator makes
+two mutants, and a bound that one step more passes over unread is written
+`Math.min(at, to) !== to`, never `at < to`, whose `at >= to` a mark would
+leave out beside `at <= to`. `tests/mutation-unmeasured.test.ts` holds each
+mark to that form and to a mutant Stryker makes under it, lists what each
+file's marks leave out, and counts the marks. The record below has the
+measurements.
 
 **Thresholds are measurements, never targets.** The first full sweep sets the
 `break` a little under what it measured; it moves up with the measurement and
@@ -977,7 +980,10 @@ does that:
   testing the stack's length that `undefined > indent` already answered,
   are one `endRightOf`, which keeps the items up to the last one at or left
   of the line (`findLastIndex`). Two moved, and two at the second loop
-  survived every sweep.
+  survived every sweep. The loop over the lines' shapes runs while
+  `Math.min(i, count) !== count`, where `i < count` made `i <= count`, one
+  shape for a line past the last, which nothing reads; of `Math.min`
+  Stryker makes `Math.max` and `===`, which make no shape at all.
 - `links.ts`: a link's text is one record, the `]` that ends it and where
   the walk resumes, or `null`, where two numbers stood with -1 for none. The
   first value of `resume`, which nothing read, and the two tests of
@@ -985,26 +991,25 @@ does that:
   survived every sweep. A paragraph's run asks `continues` before it asks
   whether the next line is a paragraph's, so no line past the last is asked
   about, and the loop over the lines made to take one step more reads a line
-  that is not there and fails.
+  that is not there and fails. The two walks that end at `to` run while
+  `Math.min(at, to) !== to`, and the walk leaves a link's text once
+  `Math.min(at, inside.end) === inside.end`. At `to` there is no character
+  a walk acts on, and leaving at the `]` or one step past it resumes at the
+  same place, so `at < to` made `at <= to` and `at >= end` made `at > end`,
+  which no input told apart.
 
 `charset.ts` keeps its line, and `tests/pattern/charset.test.ts` holds the
 set of one character to what the module says of it for any point: of `/`,
 which no glob literal is, it is the separator's and accepts `/`, and of no
 other character does it.
 
-**Marked**, where every way of writing the line makes one, six times: in
-`links.ts` the two walks that end at `to` (`at <= to`), the test that leaves
-a link's text (`at > end`, which leaves at the `]` or one step past it, and
-resumes at the same place), and the tests of a blank or a code line that
-only shape a paragraph's run (`true`, and `||` between the two), on a line
-of their own; in `scan.ts` the loop over the lines'
-shapes (`i <= count`), and, after the second sweep below, the list items'
-stack's first value. Each mark leaves out the other mutants of its mutator
-on its line as well, six, each killed and each with another mutant beside it
-that is killed too: `at >= to` twice and `i >= count`, beside `false` for
-the same loop; `false` for the paragraph's tests, beside `line.blank` for
-`!line.blank`; and `inside === null` and `at < inside.end`, beside `true`
-and `false` for each half of the same test.
+**Marked**, where every way of writing the line makes one, twice. In
+`links.ts`, the tests of a blank or a code line that only shape a
+paragraph's run stand on a line of their own as the right side of an `&&`,
+where Stryker makes of them only `true` and `||`. In `scan.ts`, after the
+second sweep below, the list items' stack's first value, whose one mutant
+starts the stack as `["Stryker was here"]`. The two marks leave out those
+three mutants and no other, and the test lists them.
 
 **What shows the answers unchanged.**
 
@@ -1051,5 +1056,24 @@ blank ends every item, as a line after a blank one does, before the stack is
 read. Put in by hand, it changed nothing on the 60,000 documents and failed
 no text or Markdown test. Every way of writing an empty stack makes it, so
 its line is marked, the sixth, and nothing else is made there.
+
+**Narrowed, 2026-11-09.** Those six marks left out 13 mutants, and six of
+them were not equivalent. A mark takes every mutant of its mutators on its
+line, and a relational operator makes two, so beside `at <= to` twice,
+`i <= count` and `at > inside.end` the marks left out `at >= to` twice,
+`i >= count` and `at < inside.end`. Beside those were `inside === null` on
+the same line, and `false` for the shape tests, which then stood as the
+whole of a `return`. Put in by hand, each of the six failed a test,
+`i >= count` by running until the test worker's heap was exhausted. Those four
+lines are now written with `Math.min`, as above. The shape tests stand as
+the right side of an `&&`, where Stryker makes no `false` of them. Two marks
+remain, and they leave out three mutants. The test lists the three, and a
+mark put over a killed mutant fails it. The 29 mutants Stryker makes on the
+lines written again were put in by hand one at a time and run against the
+text and Markdown tests with `--bail=1`. Each failed a test, none of them
+only the timing test of `linear.test.ts`, or ran without end: a loop's step
+reversed twice, and the walk's body emptied. The three left out, put in the
+same way, changed nothing on the 60,000 documents, and the code as written
+scans them as main does.
 
 **The `break` stays 94.5.**
