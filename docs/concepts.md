@@ -141,6 +141,17 @@ the signature
 A forge that rewrites commits when it merges drops the signature; see
 [merge settings](adopting.md#merge-settings-that-keep-rulings).
 
+What a ruling proves is that the agent did not sign it: the commit that
+last changed its row is signed by a key the base branch's allowed-signers
+file names, and the agent cannot use that key - kept away from its account,
+or a FIDO2 key (`ed25519-sk`), whose every signature needs a touch no
+process can supply
+([adopting](adopting.md#3-give-the-agent-and-the-person-different-identities)).
+What it does not prove is that a second person looked. A ruling is not
+two-person review or separation of duties: one person may write the brief,
+run the round and sign its rulings, and nothing checks that the signer is
+someone other than the brief's author.
+
 ### Allowed signers
 
 The OpenSSH allowed-signers file that names who may sign rulings,

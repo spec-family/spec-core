@@ -15,7 +15,7 @@ import {
   MAX_STATES,
   type GlobOptions,
 } from '../../src/pattern/index.js';
-import { fastestRatioInTurn, perRunInTurn } from '../timing.js';
+import { fastestRatioInTurn } from '../timing.js';
 
 const PATH: GlobOptions = { dialect: 'path', caseSensitive: true };
 const RIPGREP: GlobOptions = { dialect: 'ripgrep', caseSensitive: true };
@@ -994,19 +994,20 @@ describe('cost', () => {
   it('matches in time linear in the path, whatever the pattern', () => {
     const glob = compileGlob('*-*-*-*-*-*x', RIPGREP);
     // A name four times as long takes about four times as long to match, and
-    // the check allows twice that, with a tenth of a millisecond for noise: a
-    // ratio, which a slow or busy machine keeps, where a number of
-    // milliseconds is one it can break. A matcher that lets a state it has
-    // taken be taken again, as many times as there are ways to reach it,
-    // took 27 microseconds on the shorter name and 12 milliseconds on the
-    // longer, and 11 seconds on the one below.
-    const [shorter, longer] = perRunInTurn(
-      3,
-      5,
-      () => glob.match(`${'a-'.repeat(5)}y`),
-      () => glob.match(`${'a-'.repeat(20)}y`),
-    ) as [number, number];
-    expect(longer).toBeLessThan(8 * shorter + 0.1);
+    // the check allows twice that: a ratio, which a slow or busy machine
+    // keeps, where a number of milliseconds is one it can break. It is read
+    // past a stall, as ADR-0007 has it since 2026-10-19, with no allowance
+    // for noise; the tenth of a millisecond it once allowed was about two of
+    // the shorter name's runs, and a stall that spoiled the three stretches
+    // it read failed a mutant that changes nothing. A matcher that lets a
+    // state it has taken be taken again, as many times as there are ways to
+    // reach it, took 27 microseconds on the shorter name and 12 milliseconds
+    // on the longer, and 11 seconds on the one below.
+    const shorter = `${'a-'.repeat(5)}y`;
+    const longer = `${'a-'.repeat(20)}y`;
+    const read = (): number => fastestRatioInTurn(21, 3, () => glob.match(shorter), () => glob.match(longer));
+    const first = read();
+    expect(first < 8 ? first : Math.min(first, read())).toBeLessThan(8);
     // A backtracking engine takes about 28 seconds on this; see the ADR.
     expect(glob.match(`${'a-'.repeat(60)}y`)).toBe(false);
   });
