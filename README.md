@@ -17,7 +17,7 @@ things only a person should.
 | Tool | The question it answers | Start with |
 | --- | --- | --- |
 | [spec-brief](https://github.com/spec-family/spec-brief) | Is this round's contract complete? Can these rounds run in parallel without writing the same file? Is this one really done? | `lint`, `matrix`, `schedule`, `archive` |
-| [spec-graph](https://github.com/spec-family/spec-graph) | Do the documents agree with each other - references, lifecycles, open items handed to documents that no longer hold? | `check` |
+| [spec-graph](https://github.com/spec-family/spec-graph) | Do the documents agree with each other and with the record they cite - references, lifecycles, open items handed to documents that no longer hold, work marked done without its evidence, commits and paths that are not there? | `check` |
 | [spec-guard](https://github.com/spec-family/spec-guard) | Does the code do what the documents assert, and can each assertion actually fail? | `spec-guard`, `query`, `prove` |
 | [spec-harness](https://github.com/spec-family/spec-harness) | What does an agent need to start this round, may it touch this file, did it stay inside the lines, and who ruled on the exceptions? | `init`, `context`, `guard`, `audit` |
 
@@ -25,7 +25,7 @@ things only a person should.
           goal ─▶ agent drafts briefs ─▶ spec-brief lint / schedule ─▶ person approves
                                                                             │
     spec-harness context ◀──────────────────────────────────────────────────┘
-          │  (brief + cited ADRs from spec-graph + rules in force from spec-guard)
+          │  (brief + the documents it cites + rules in force from spec-guard)
           ▼
     agent works in a worktree ── spec-harness guard (hooks) ── escalate ─▶ person rules
           │
@@ -33,11 +33,11 @@ things only a person should.
     spec-harness audit ─▶ spec-brief archive --dry-run ─▶ person approves ─▶ archive
           │
           ▼
-    CI, every change: spec-guard (code ↔ docs), spec-graph (docs ↔ docs), spec-brief lint
+    CI, every change: spec-guard (code ↔ docs), spec-graph (docs ↔ docs, commits, paths), spec-brief lint
 ```
 
-**The smallest useful install is one tool.** spec-guard alone keeps code and
-ADRs honest. spec-brief alone manages rounds of work and proves parallel waves
+**The smallest useful install is one tool.** spec-guard alone holds code to
+what its documents say. spec-brief alone manages rounds of work and proves parallel waves
 cannot collide. `spec-harness init` sets up all four so they agree from the
 first day - which directories hold briefs, which statuses retire a document,
 which globs mean what.
