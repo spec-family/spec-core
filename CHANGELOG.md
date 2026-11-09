@@ -85,6 +85,12 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Documentation
 
+- ADR-0005 says where a tool's documentation lives: its README is a front
+  page, and its full reference is in its repository's `docs/reference/`,
+  published in its package and linked relatively, while the guides that
+  span the tools stay here. The two clauses that sent a reader to a tool's
+  README for its severities and its status keys name its reference
+  documents.
 - The adopting guide lists what exit `2` covers as ADR-0005 has it since
   2026-10-08, an error a tool did not expect and an output its reader closed
   among them, and says why its GitLab job lets exit `1` through and never
