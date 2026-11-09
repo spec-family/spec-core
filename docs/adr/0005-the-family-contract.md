@@ -427,6 +427,35 @@ tool's CLAUDE.md can point.
   redirects for good when a repository or a fork is made at the previous
   location.
 
+### Documentation
+
+- *Amended 2026-11-09*: **a tool's README is its front page, and its
+  reference is in `docs/reference/`.** On 2026-11-08 spec-harness's README
+  held 17,864 words, spec-guard's 17,494 and spec-graph's 13,734: every
+  rule, flag and configuration key, and the reasoning behind each, on the
+  page a person meeting the tool reads first. A tool's README says what the
+  tool is, shows a quickstart with what a release printed, lists its checks
+  at a glance with a minimal configuration and a CI job, and links to the
+  rest. The rest, the tool's full reference, is in its repository's
+  `docs/reference/*.md`:
+  - **published in the package**: `files` in the tool's `package.json`
+    names `docs/reference/`, so the reference installed beside a release is
+    that release's, and an agent reads it from `node_modules/` with no
+    network;
+  - **linked relatively**, from the README and from one reference document
+    to another, so a link resolves in the repository at any tag and in the
+    installed package, where a link to `main` would describe another
+    release;
+  - **changed with what it describes**, in the same pull request, and
+    released with it.
+
+  The guides that span the tools - the tutorial, the adopting guide and the
+  concepts - and this contract stay in spec-core's `docs/`: a tool's
+  reference links to them and does not restate them. The Markdown in each
+  repository is where all of it is written; a website, if one is made,
+  renders those files. Where this contract says what a tool's documentation
+  lists or names, it is the tool's reference documents.
+
 ### Findings and output
 
 - A finding has a rule id, a severity, a place (file, line, column where there
@@ -445,10 +474,11 @@ tool's CLAUDE.md can point.
   line: GitLab tells a new issue from one it has seen by the fingerprint, and
   a reworded message or a moved line would show as one problem fixed and
   another found. `severity` is `major` for an error, `minor` for a warning and
-  `info` for a note; `critical` and `blocker` are for the cases a tool's README
-  names - in spec-guard a failing assertion, a rule that survived `prove`, a
-  ghost citation and a stale one under `--strict`; in spec-graph an error that
-  is one without `--strict`. The `description` holds the hint, the next
+  `info` for a note; `critical` and `blocker` are for the cases a tool's
+  reference documents name (*Documentation*, above) - in spec-guard a
+  failing assertion, a rule that survived `prove`, a ghost citation and a
+  stale one under `--strict`; in spec-graph an error that is one without
+  `--strict`. The `description` holds the hint, the next
   action, after the message. Where a tool does not yet - spec-brief's
   fingerprint holds the message; spec-guard's `description` has no hint, and
   its fingerprint of a directive it cannot read holds the message - that is a
@@ -489,9 +519,10 @@ tool's CLAUDE.md can point.
   state file in the working tree. A brief's lifecycle is its directory and its
   `status`; a wave is computed from `dependsOn` and `wave`.
 - *Amended 2026-09-30*: **where a status is read.** Front matter first -
-  `status`, and the other keys a tool's README lists - then, where the front
-  matter names none, the other places each README lists: a `## Status`
-  section, a `Status:` label, the directory a document is in. spec-graph and
+  `status`, and the other keys a tool's reference documents list
+  (*Documentation*, above) - then, where the front matter names none, the
+  other places each tool's reference lists: a `## Status` section, a
+  `Status:` label, the directory a document is in. spec-graph and
   spec-guard read one more place, **a table of exactly two columns before the
   document's first `##` heading**: a row whose left cell, the header row
   included, is exactly a status key once emphasis is stripped - `Status`,
