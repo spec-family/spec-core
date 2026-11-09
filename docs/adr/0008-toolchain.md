@@ -437,16 +437,19 @@ spec-guard's is the pin and the assertion in its ADR-0003.
 
 ## Amended 2026-11-09: the order's record, carried with vitest 5
 
-The order a mutant's files run in keeps its own record of the file that
-failed when the worker last ran it (ADR-0007, the entry of 2026-11-09), in
-`vitest.mutation.config.ts`: a reporter, `lastRun`, records each file's
-verdict at its end, and `QuickestFirst` reads the record and no longer the
-cache's `failed`. Vitest 5's cache keeps a failure from a run narrowed by a
-test name pattern until a run of the whole file passes, and shares it
-between Stryker's workers, so the order had lost the file that killed the
-last mutant. The record uses the reporter interface of vitest 3 and later,
-`onTestModuleEnd` and `TestModule.state()`, so it reads the same on vitest
-4.1.
+The order a mutant's files run in keeps its own record of what each file
+did when the worker last ran it, its verdict and its time (ADR-0007, the
+entry of 2026-11-09), in `vitest.mutation.config.ts`: a reporter,
+`lastRun`, records both at a file's end, and `QuickestFirst` ranks by the
+record, failed first, then by its time, or the cache's for a file the
+record lacks. Vitest 5's cache keeps a failure from a run narrowed by a test
+name pattern, or stopped at its first failure, until a run of the whole
+file passes, takes no time from such a run where it has one, and shares
+both between Stryker's workers. So the order had lost the file that killed
+the last mutant, and ranked the files of a static mutant's run by their
+times in the dry run. The record uses the reporter interface of vitest 3
+and later, `onInit`, `onTestModuleEnd`, `TestModule.state()` and
+`TestModule.diagnostic()`, so it reads the same on vitest 4.1.
 
 **Step 4 carries it.** Each of the four tools copies `QuickestFirst` into
 its `vitest.mutation.config.ts`, and spec-brief into `vitest.core.config.ts`
@@ -454,10 +457,11 @@ as well, with a test of it (`tests/mutation-shards.test.ts` in spec-graph
 and spec-harness, `tests/mutation-order.test.ts` in spec-brief and
 spec-guard). The pull request that takes a tool to vitest 5 takes the
 record in the same change, in each configuration file that has the
-sequencer: the `failedLast` map and the `lastRun` reporter above the class,
-the class's rank reading `failedLast` where it read `last.failed`, `lastRun`
-named after `'default'` in the suite's `reporters`, and the tests, whose
-fixtures give the record a file's end as vitest gives it a reporter. Each
+sequencer: the `lastRuns` map and the `lastRun` reporter above the class,
+the class's rank as above, `lastRun` named after `'default'` in the
+suite's `reporters`, and the tests, whose fixtures give the record a
+file's end as vitest gives it a reporter, and clear it before each test as
+a vitest that starts does. Each
 configuration file is its own module, so spec-brief's two keep a record
 each. A tool's test that holds its reporters to `['default']`, or to what
 vitest resolves on a runner, then expects `lastRun` beside it.
@@ -477,7 +481,8 @@ It prints 6.89 for spec-core's sweep of 8b0c22e on vitest 4 and 10.82 for
 
 **When the record goes.** The test that runs Stryker's runner through
 vitest asserts that vitest's cache still has a file failed after a narrowed
-run in which it passed. When a vitest release fails that assertion, its
-cache forgets a failure as vitest 4's did, and the record may go: in a pull
-request that takes it out and nothing else, whose full sweep reads a mean
-within the range of the sweeps with it.
+run in which it passed, and still has the file's first time after a
+narrowed run of one quick test. When a vitest release fails that
+assertion, its cache keeps what vitest 4's kept, and the record may go: in
+a pull request that takes it out and nothing else, whose full sweep reads
+a mean within the range of the sweeps with it.

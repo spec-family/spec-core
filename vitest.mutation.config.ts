@@ -4,37 +4,45 @@ import { defineConfig } from 'vitest/config';
 import { BaseSequencer, type Reporter, type TestModule, type TestSpecification } from 'vitest/node';
 
 /**
- * Whether each test file failed when this process last ran it, as vitest 4's
- * cache had it and vitest 5's does not.
+ * What each test file did when this process last ran it, whether it failed
+ * and how long it took, as vitest 4's cache had it and vitest 5's does not.
  *
  * Stryker narrows each mutant's run to the tests that cover it, by a test name
- * pattern. Vitest 5 counts such a run as partial, and its cache keeps a
- * failure from one until a run of the whole file passes, and it reads back
- * what the other workers write to the same cache file. In a sweep every run
- * but the first is narrowed, so a file that killed one mutant, in any worker,
- * stayed failed for every mutant after it, and the order lost what it knew of
- * the last run: the file that killed the last mutant (ADR-0008, amended
- * 2026-11-08). So the order keeps its own record. Vitest calls the sequencer
- * and the reporters in the one process that drives the worker, so the record
- * lives in that process's memory, with no file to name or clean up, and dies
- * with it, as vitest 4's did. A file that passed or failed in a run has that
- * verdict until a run runs it again; a file the run skipped or did not reach
- * keeps the one it had.
+ * pattern, and stops a run at its first failure. Vitest 5 counts either run as
+ * partial. From a partial run its cache takes a failure and keeps it until a
+ * run of the whole file passes, and takes no time where it has one, so a
+ * file's time stays the dry run's, of the whole file; and it reads back what
+ * the other workers write to the same cache file. So in a sweep a file that
+ * killed one mutant, in any worker, stayed failed for every mutant after it,
+ * and the order lost the file that killed the last mutant (ADR-0008, amended
+ * 2026-11-08); and a static mutant, which runs every file, ran its killer
+ * after the long files, where vitest 4 ran it among the first (ADR-0007,
+ * 2026-11-09). So the order keeps its own record, by vitest 4's rule: a file
+ * that passed or failed in a run has that verdict and that run's time until a
+ * run runs it again, and a file the run skipped or did not reach keeps what
+ * it had. Vitest calls the sequencer and the reporters in the one process
+ * that drives the worker, so the record lives in that process's memory, with
+ * no file to name or clean up, and dies with it.
  */
-const failedLast = new Map<string, boolean>();
+const lastRuns = new Map<string, { failed: boolean; duration: number }>();
 
 /** The reporter that keeps the record above, named in the suite below. */
 export const lastRun = {
+  // A vitest that starts has run nothing, whatever one before it in the
+  // process ran.
+  onInit(): void {
+    lastRuns.clear();
+  },
   onTestModuleEnd(module: TestModule): void {
     const state = module.state();
-    if (state === 'passed' || state === 'failed') failedLast.set(module.moduleId, state === 'failed');
+    if (state === 'passed' || state === 'failed') lastRuns.set(module.moduleId, { failed: state === 'failed', duration: module.diagnostic().duration });
   },
 } satisfies Reporter;
 
 /**
  * The order a mutant's test files run in: a file that failed when this process
- * last ran it first, as vitest 4 had it, then the quickest first, where vitest
- * runs the longest first.
+ * last ran it first, as vitest 4 had it, then the quickest when it last ran
+ * first, where vitest runs the longest first.
  *
  * Stryker gives a mutant the files of the tests that cover it, every file for
  * a static mutant, runs them one after another in one worker and stops at the
@@ -70,10 +78,13 @@ export class QuickestFirst extends BaseSequencer {
     const { cache } = this.ctx;
     const rank = (file: TestSpecification): [number, number] => {
       // What vitest's own sequencer asks its cache; a test holds the two
-      // together. Its `failed` is not read: that is the record's.
+      // together. The record answers for a file this process has run, and
+      // the cache's time, the dry run's, for one it has not.
       const last = cache.getTestSpecificationResult(file);
-      if (last === undefined) return [2, -(statSync(file.moduleId, { throwIfNoEntry: false })?.size ?? 0)];
-      return [failedLast.get(file.moduleId) === true ? 0 : 1, last.duration];
+      const ran = lastRuns.get(file.moduleId);
+      const time = ran?.duration ?? last?.duration;
+      if (time === undefined) return [2, -(statSync(file.moduleId, { throwIfNoEntry: false })?.size ?? 0)];
+      return [ran?.failed === true ? 0 : 1, time];
     };
     const ranked = files.map((file) => ({ file, rank: rank(file) }));
     return ranked.sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1]).map(({ file }) => file);

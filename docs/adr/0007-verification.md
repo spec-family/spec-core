@@ -69,10 +69,11 @@ mark to that form and to a mutant Stryker makes under it, lists what each
 file's marks leave out, and counts the marks. The record below has the
 measurements.
 *Amended 2026-11-09*: the order runs first a file that failed when the
-worker last ran it by a record of its own, which vitest 5's cache no longer
-keeps for it: a reporter in `vitest.mutation.config.ts` keeps it in the
-memory of the process that drives the worker, where the sequencer reads it.
-The record below has the measurements.
+worker last ran it, then the quickest when it last ran, by a record of its
+own, which vitest 5's cache no longer keeps for it: a reporter in
+`vitest.mutation.config.ts` keeps each file's verdict and time in the memory
+of the process that drives the worker, where the sequencer reads them. The
+record below has the measurements.
 
 **Thresholds are measurements, never targets.** The first full sweep sets the
 `break` a little under what it measured; it moves up with the measurement and
@@ -1086,17 +1087,21 @@ scans them as main does.
 ### 2026-11-09: the order's own record of the last run
 
 The order of 2026-10-11 runs first a file that failed when the worker last
-ran it, and it read that from vitest's cache. Vitest 5 changed what the
-cache keeps. In 5.0.5 (`ResultsCache.update` and `isPartialRun` in
-`dist/chunks/cli-api.De07GUeT.js`) a run narrowed by a test name pattern is
-partial: a file that fails in one is recorded failed, and a file that passes
-in one keeps what it had, a failure among it, until a run of the whole file
-passes. Before it writes, each process also reads back what the others wrote
-to the same cache file. Stryker narrows every mutant's run by a test name
-pattern, and its workers share one cache file, so in a sweep a file that
+ran it, then the quickest, and it read both from vitest's cache. Vitest 5
+changed what the cache keeps. In 5.0.5 (`ResultsCache.update` and
+`isPartialRun` in `dist/chunks/cli-api.De07GUeT.js`) a run is partial when a
+test name pattern narrows it, or when it is cancelled, as a run that stops
+at its first failure is. From a partial run the cache takes a failure and
+keeps it until a run of the whole file passes, and takes a time only for a
+file it has none for. Before it writes, each process also reads back what
+the others wrote to the same cache file. Stryker narrows every mutant's run
+but a static mutant's by a test name pattern, stops every run at its first
+failure, and its workers share one cache file. So in a sweep a file that
 killed one mutant, in any worker, was failed for every mutant after it, in
-all of them. Vitest 4 read the cache file once, when a process started, and
-from then on set every file a run ran to that run's verdict, narrowed or not.
+all of them, and each file kept the dry run's time, the whole file's.
+Vitest 4 read the cache file once, when a process started, and from then on
+set every file a run ran to that run's verdict and time, narrowed, stopped
+or not.
 
 **Before.** Main's last three sweeps on vitest 4 and its five on vitest 5.
 "Tests to a kill" is the mean of the tests a killed mutant completed, the
@@ -1126,44 +1131,86 @@ of the three sweeps on vitest 4; on vitest 5 it was a runtime error at
 and timed out in the four after. `false` on the same line was killed after
 6 tests on vitest 4 and after 35 to 53 on vitest 5.
 
-**The record.** `vitest.mutation.config.ts` keeps, for each test file,
-whether it failed when this process last ran it. A reporter, `lastRun`,
-named in the suite's `reporters`, records a file's verdict at its end
-(`onTestModuleEnd`), and `QuickestFirst` reads the record where it read the
-cache's `failed`. It keeps vitest 4's rule: a file that passed or failed in
-a run has that verdict until a run runs it again, and a file the run
-skipped, or did not reach before the first failure stopped it, keeps the
-one it had.
+**The record, first of the failure alone.** `vitest.mutation.config.ts`
+keeps, for each test file, what it did when this process last ran it. A
+reporter, `lastRun`, named in the suite's `reporters`, records a file's
+verdict at its end (`onTestModuleEnd`), and `QuickestFirst` reads the record
+where it read the cache's `failed`. It keeps vitest 4's rule: a file that
+passed or failed in a run has that verdict until a run runs it again, and a
+file the run skipped, or did not reach before the first failure stopped it,
+keeps the one it had.
 
 It is kept in memory. Stryker's vitest runner makes one vitest in each
 worker process (`createVitest`), vitest makes the sequencer with that vitest
 and calls the reporters in the same process, and only the test files run in
 a fork of it. So the reporter and the sequencer share the module the
 configuration file is, with no file to name, write each run or clean up. A
-worker Stryker starts in place of one that timed out begins with no record,
-where vitest 4's began with whatever the cache file last held; the run that
-timed out failed no file, so what is lost is the run before it.
+vitest that starts clears the record (`onInit`). A worker Stryker starts in
+place of one that timed out begins with no record, where vitest 4's began
+with whatever the cache file last held; the run that timed out failed no
+file, so what is lost is the run before it.
 
-**The times stay as vitest 5 has them.** Vitest 4 took each file's time
-from each run that ran it, a narrowed one too. Vitest 5 keeps the first time
-it records for a file, in a sweep the dry run's time for the whole file, and
-a narrowed run changes none. So on vitest 4 a long file whose tests that
-cover a mutant are quick ranked among the quick files after a run of those,
-and on vitest 5 it ranks by its whole time. The record keeps no times, so
-the sweep below measures the failure alone.
+The pull request's first sweep, of 85245ba, took the failure from the record
+and the time from the cache, beside main's sweep of the same source:
+
+| | Main, 598d9de | The failure, 85245ba |
+| --- | ---: | ---: |
+| Run | 42578038632 | 42592626788 |
+| Killed, timed out, survived, without coverage | 5,494, 236, 191, 7 | 5,502, 228, 191, 7 |
+| Runtime errors | 0 | 0 |
+| Score, over 5,928 | 96.66% | 96.66% |
+| Tests to a kill | 10.82 | 9.58 |
+| Those of the killed mutants that are not static | 5.63 | 4.91 |
+| The 282 static mutants', in all | 30,055 | 27,031 |
+| By the first | 2,933 | 3,237 |
+| Six jobs | 25m58s | 24m43s |
+
+The killed mutants that are not static were back where they were on vitest
+4, which read 4.91 to 5.02 tests to a kill and 3,231 to 3,257 by the first.
+The static ones were not: on vitest 4 their tests before a kill came to
+11,731 to 17,936. `src/pattern/charset.ts` 36, the mark of the separator
+made `false`, was killed by the first test of
+`tests/pattern/differential.test.ts` on vitest 4, after 146 tests on main
+and after 809 here. A static mutant runs every file, so after the file that
+failed last its order is the times', and these were the dry run's, of each
+whole file, which rank the long files last. On vitest 4 a file's time was
+that of the last run that ran it, narrowed or stopped, and a file that had
+run a few of its tests, or failed early, ranked among the quick ones.
+
+No survivor was new or gone: 198 undetected, as on main. `scan.ts` 213
+`i <= frontLines` was killed by its sixth test, as on vitest 4, and `false`
+there by its sixth. Fifteen mutants went from a timeout to a kill, eleven of
+them mutants of `serveLines` in `src/jsonrpc/mcp.ts` killed by their first
+test, and seven the other way: four of the seven to the verdict all three
+sweeps on vitest 4 gave them, two that change between main's own sweeps,
+and one, `scan.ts` 281 `at >= 0` made `true`, that all eight of main's had
+killed, after 4 tests on vitest 4.
+
+**Then the time.** The record keeps each file's time beside its verdict, by
+the same rule (`diagnostic().duration`, the time vitest 4's cache took), and
+the order ranks a file by the record's time where it has one and by the
+cache's otherwise; a file with neither runs after those, the larger first,
+as before. That is vitest 4's rule in full, and the pull request's second
+sweep measures it.
 
 **Tests.** `tests/mutation-shards.test.ts` holds the record: a file that
 failed when the worker last ran it runs first however long it takes, and of
 two the quicker; the cache's `failed` is not read, where it has one from a
-narrowed run that a later run passed; a file a run skipped, or left pending
-or queued, keeps its verdict until a run passes it. One test runs Stryker's
-runner as it runs mutants, in a process of its own: a vitest made from this
-configuration with the options the runner gives it, and three runs narrowed
-by a test name pattern, after each of which the sequencer vitest resolved
-orders two files. After the run in which the long file failed, it runs
-first; after the next, in which it passed, it runs after the quick one,
-while vitest's cache still has it failed, which the test asserts as the
-reason for the record. Each of the four failed with the order reading the
-cache's `failed` again. The test through vitest failed too with the reporter
-taken out of the suite, and the test of a skipped file with the reporter
-recording every state.
+narrowed run that a later run passed; a file ranks by its time when the
+worker last ran it, where the cache keeps the whole file's, and by that time
+where the cache has none; a file a run skipped, or left pending or queued,
+keeps its verdict and its time until a run runs it; and a vitest that starts
+has run nothing. One test runs Stryker's runner as it runs mutants, in a
+process of its own: a vitest made from this configuration with the options
+the runner gives it, and four runs narrowed by a test name pattern, after
+each of which the sequencer vitest resolved orders two files. After the run
+in which the long file failed, it runs first; after the next, in which it
+passed, it runs after the quick one, while vitest's cache still has it
+failed; and after a run of its one quick test it runs first, while vitest's
+cache still has the first run's time for it. The test asserts what the
+cache has too, as the reason for the record. Seven breaks of the record, put
+in by hand one at a time, each failed one of these tests or more: the
+failure read from the cache, the time read from the cache, the time read
+from the record alone, the record not cleared when a vitest starts, the
+reporter not named, every state recorded, and a pass recorded as the
+failure.

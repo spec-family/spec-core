@@ -390,17 +390,20 @@ describe("the order a mutant's test files run in", () => {
   }
   afterAll(() => rmSync(WORK, { recursive: true, force: true }));
 
-  // The order's own record, told of a file's end as vitest tells a reporter.
-  const ended = async (file: string, state: TestModuleState) => {
+  // The order's own record, told of a file's end as vitest tells a reporter,
+  // by default in the time the cache has for it.
+  const ended = async (file: string, state: TestModuleState, duration = TIMED[file]?.duration ?? 0) => {
     const { lastRun } = await mutationSuite();
-    lastRun.onTestModuleEnd({ moduleId: `${WORK}/${file}`, state: () => state } as unknown as TestModule);
+    lastRun.onTestModuleEnd({ moduleId: `${WORK}/${file}`, state: () => state, diagnostic: () => ({ duration }) } as unknown as TestModule);
   };
-  // A run of every file, in which those named failed and the rest passed:
-  // what the record holds after it, whatever it held before.
+  // A run of every file the worker has timed, in which those named failed and
+  // the rest passed, each in its time: what the record holds after it,
+  // whatever it held before.
   const ran = async (failed: readonly string[]) => {
-    for (const file of FOUND) await ended(file, failed.includes(file) ? 'failed' : 'passed');
+    for (const file of Object.keys(TIMED)) await ended(file, failed.includes(file) ? 'failed' : 'passed');
   };
-  beforeEach(() => ran([]));
+  // Each test starts from a vitest that has run nothing.
+  beforeEach(async () => (await mutationSuite()).lastRun.onInit());
 
   const worker = (timed: Timed, found = FOUND) => {
     const asked: string[] = [];
@@ -453,13 +456,28 @@ describe("the order a mutant's test files run in", () => {
     expect((await ours(kept)).order).toEqual(['path', 'markdown/links', 'markdown/properties', 'markdown/linear', 'pattern/glob', 'pattern/oracle']);
   });
 
-  it("keeps a file's verdict through a run that skips it or does not reach it, until a run runs it", async () => {
+  it("keeps a file's verdict and time through a run that skips it or does not reach it, until a run runs it", async () => {
     await ran(['tests/markdown/links.test.ts']);
     for (const state of ['skipped', 'pending', 'queued'] as const) await ended('tests/markdown/links.test.ts', state);
     await ended('tests/path.test.ts', 'passed');
     expect((await ours(TIMED)).order).toEqual(['markdown/links', 'path', 'markdown/properties', 'markdown/linear', 'pattern/glob', 'pattern/oracle']);
     await ended('tests/markdown/links.test.ts', 'passed');
     expect((await ours(TIMED)).order).toEqual(['path', 'markdown/links', 'markdown/properties', 'markdown/linear', 'pattern/glob', 'pattern/oracle']);
+    // Quicker than `path`, had it run.
+    for (const state of ['skipped', 'pending', 'queued'] as const) await ended('tests/markdown/links.test.ts', state, 1);
+    expect((await ours(TIMED)).order).toEqual(['path', 'markdown/links', 'markdown/properties', 'markdown/linear', 'pattern/glob', 'pattern/oracle']);
+  });
+
+  it("ranks a file by its time when the worker last ran it, where vitest 5's cache keeps the time of the whole file", async () => {
+    // A run narrowed to one quick test of the longest file.
+    await ended('tests/markdown/linear.test.ts', 'passed', 2);
+    expect((await ours(TIMED)).order).toEqual(['markdown/linear', 'path', 'markdown/links', 'markdown/properties', 'pattern/glob', 'pattern/oracle']);
+  });
+
+  it('ranks a file the worker has run by its time there, where the cache has none for it', async () => {
+    await ended('tests/later.test.ts', 'passed', 10);
+    const found = [...FOUND, 'tests/later.test.ts'];
+    expect((await ours(TIMED, found)).order).toEqual(['path', 'later', 'markdown/links', 'markdown/properties', 'markdown/linear', 'pattern/glob', 'pattern/oracle']);
   });
 
   it('orders the files a worker has timed as vitest would but for the quickest first, and asks the cache what vitest asks it', async () => {
@@ -481,6 +499,9 @@ describe("the order a mutant's test files run in", () => {
   });
 
   it('gives a worker that has run nothing the order vitest gives it, the larger file first', async () => {
+    // Whatever a vitest before it in the process ran.
+    await ran(['tests/markdown/links.test.ts']);
+    (await mutationSuite()).lastRun.onInit();
     const { order } = await ours({});
     expect(order).toEqual(['pattern/glob', 'markdown/links', 'pattern/oracle', 'markdown/properties', 'markdown/linear', 'path']);
     expect(order).toEqual((await theirs({})).order);
@@ -491,18 +512,20 @@ describe("the order a mutant's test files run in", () => {
    * of its own: a vitest made from this configuration with the options the
    * runner gives it, and runs narrowed by a test name pattern, each after
    * clearing the files of the run before. After each run, the order the
-   * sequencer vitest resolved gives two files, `short`, which passes in a
-   * millisecond or two, and `long`, which takes 200, and whether vitest's cache
-   * has `long` failed.
+   * sequencer vitest resolved gives two files, and what vitest's cache has of
+   * the second: `short`, which takes 50 ms, and `long`, whose tests take 200,
+   * none and none, the second failing.
    */
-  function asStrykerRuns(runs: readonly { files: readonly string[]; pattern: string }[]): { order: string[]; cached: boolean }[] {
+  type Run = { order: string[]; cached: { failed: boolean; duration: number } };
+  function asStrykerRuns(runs: readonly { files: readonly string[]; pattern: string }[]): Run[] {
     const root = mkdtempSync(join(tmpdir(), 'spec-core-runs-'));
     try {
       mkdirSync(join(root, 'tests'));
-      writeFileSync(join(root, 'tests/short.test.ts'), "test('short holds', () => {});");
+      const pause = (ms: number) => `await new Promise((end) => setTimeout(end, ${ms}));`;
+      writeFileSync(join(root, 'tests/short.test.ts'), `test('short holds', async () => { ${pause(50)} });`);
       writeFileSync(
         join(root, 'tests/long.test.ts'),
-        "test('long holds', async () => { await new Promise((end) => setTimeout(end, 200)); }); test('long breaks', () => { throw new Error('broken'); });",
+        `test('long holds', async () => { ${pause(200)} }); test('long breaks', () => { throw new Error('broken'); }); test('long quick', () => {});`,
       );
       const script = `
         import { createVitest } from 'vitest/node';
@@ -521,7 +544,7 @@ describe("the order a mutant's test files run in", () => {
           const order = await new ctx.config.sequence.sequencer(ctx).sort(both);
           results.push({
             order: order.map((file) => file.moduleId.slice(path('').length - '.test.ts'.length, -'.test.ts'.length)),
-            cached: ctx.cache.getTestSpecificationResult(both[1]).failed,
+            cached: ctx.cache.getTestSpecificationResult(both[1]),
           });
         }
         await ctx.close();
@@ -529,28 +552,35 @@ describe("the order a mutant's test files run in", () => {
         process.stdout.write('@runs@' + JSON.stringify(results));
       `;
       const out = execFileSync(process.execPath, ['--input-type=module', '-e', script], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-      return JSON.parse(out.slice(out.lastIndexOf('@runs@') + '@runs@'.length)) as { order: string[]; cached: boolean }[];
+      return JSON.parse(out.slice(out.lastIndexOf('@runs@') + '@runs@'.length)) as Run[];
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   }
 
-  it("runs first the file that failed in the run before, in runs narrowed as Stryker narrows them, where vitest 5's cache keeps an older failure", () => {
+  it("runs first the file that failed in the run before, then the quickest in its last run, in runs narrowed as Stryker narrows them, where vitest 5's cache keeps an older failure and the first time", () => {
     const runs = asStrykerRuns([
       { files: ['short', 'long'], pattern: 'holds$' },
       { files: ['long'], pattern: 'breaks$' },
       { files: ['long'], pattern: 'holds$' },
+      { files: ['long'], pattern: 'quick$' },
     ]);
     expect(runs.map(({ order }) => order)).toEqual([
       ['short', 'long'],
       ['long', 'short'],
       ['short', 'long'],
+      ['long', 'short'],
     ]);
     // Why the order keeps a record: after the third run vitest's cache still
-    // has the second run's failure. Where it does not, vitest forgets a
-    // failure as 4 did, and ADR-0008 says what a sweep must show before the
-    // record goes.
-    expect(runs.map(({ cached }) => cached)).toEqual([false, true, true]);
+    // has the second run's failure, and after the fourth the first run's
+    // time. Where it does not, vitest forgets as 4 did, and ADR-0008 says
+    // what a sweep must show before the record goes.
+    expect(runs.map(({ cached }) => [cached.failed, cached.duration > 100])).toEqual([
+      [false, true],
+      [true, true],
+      [true, true],
+      [true, true],
+    ]);
   });
 });
 
