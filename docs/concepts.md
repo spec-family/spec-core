@@ -108,6 +108,24 @@ spec-graph's rule of the same name is a different check: a document resting
 on a decision that was retired
 ([spec-graph](https://github.com/spec-family/spec-graph#what-it-checks)).
 
+### Claim
+
+A list item in a specification that opens with a label in code, such as
+`` `Implemented`: a refund over the captured amount is refused. ``, saying
+how far what it states holds; `<!-- @spec-item id="refund-limit" -->` above
+it gives it a name. What each label means is each tool's configuration.
+`spec-guard claims` holds a claim to the evidence its label asks for, such as
+a test a directive under it counts; spec-graph reads the label as the item's
+state, and `spec-graph diff` lists a label raised or lowered; a brief names
+the claims its round raises in `raises`, and spec-brief's archive refuses the
+round while one still says the work is open. Its `awaits` names a register
+row whose status must settle before the round starts. A label written in a
+sentence is no claim, and `spec-guard claims` counts those in a note
+([the tutorial](tutorial.md#one-claim-three-tools),
+[spec-guard ADR-0020](https://github.com/spec-family/spec-guard/blob/main/docs/adr/0020-a-claim-is-held-to-its-evidence.md),
+[spec-graph ADR-0024](https://github.com/spec-family/spec-graph/blob/main/docs/adr/0024-a-claims-label-is-its-state.md),
+[spec-brief ADR-0012](https://github.com/spec-family/spec-brief/blob/main/docs/adr/0012-a-brief-names-the-claims-it-raises.md)).
+
 ### Probe
 
 A test a defect brief carries in a fenced `probe` block, with how it must
