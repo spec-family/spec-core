@@ -72,9 +72,8 @@ measurements.
 worker last ran it by a record of its own, which vitest 5's cache no longer
 keeps for it: a reporter in `vitest.mutation.config.ts` keeps each file's
 verdict in the memory of the process that drives the worker, where the
-sequencer reads it. The times stay the cache's, each whole file's: a record
-of each run's time, as vitest 4 had it, was swept and lost. The record below
-has the measurements.
+sequencer reads it. The times stay the cache's, each whole file's. The
+record below has the measurements.
 
 **Thresholds are measurements, never targets.** The first full sweep sets the
 `break` a little under what it measured; it moves up with the measurement and
@@ -1146,35 +1145,40 @@ worker process (`createVitest`), vitest makes the sequencer with that vitest
 and calls the reporters in the same process, and only the test files run in
 a fork of it. So the reporter and the sequencer share the module the
 configuration file is, with no file to name, write each run or clean up. A
-vitest that starts clears the record (`onInit`). A worker Stryker starts in
-place of one that timed out begins with no record, where vitest 4's began
-with whatever the cache file last held; the run that timed out failed no
-file, so what is lost is the run before it.
+worker Stryker starts in place of one that timed out begins with no record,
+where vitest 4's began with whatever the cache file last held; the run that
+timed out failed no file, so what is lost is the run before it. The
+reporter has no `onInit`: vitest 5 calls that at the start of every run
+(`Vitest.start`), so a record it cleared would be empty at every sort, as
+two of the sweeps below were.
 
-**Two sweeps.** The pull request swept the record twice beside main's sweep
-of the same source: first of the failure alone, with the cache's times;
-then with each file's time kept in the record as well, by the same rule
-(`diagnostic().duration`, the time vitest 4's cache took), and a file ranked
-by the record's time where it had one and the cache's otherwise, which is
-vitest 4's rule in full.
+**The sweeps.** The pull request's sweeps beside main's sweep of the same
+source. The first, of 85245ba, is the record as it stands. The second, of
+1bbf77f, was to keep each file's time in the record as well, by the same
+rule (`diagnostic().duration`, the time vitest 4's cache took), which is
+vitest 4's rule in full; it gave the reporter an `onInit` that cleared the
+record, for the tests' sake. The third, of aeeefb4, went back to the
+failure alone and kept that `onInit`. So the second and the third sorted
+every run with an empty record: no failure to go by at all, and the cache's
+times.
 
-| | Main, 598d9de | The failure, 85245ba | The failure and the time, 1bbf77f |
-| --- | ---: | ---: | ---: |
-| Run | 42578038632 | 42592626788 | 42595188849 |
-| Killed, timed out, survived, without coverage | 5,494, 236, 191, 7 | 5,502, 228, 191, 7 | 5,494, 236, 191, 7 |
-| Runtime errors | 0 | 0 | 0 |
-| Score, over 5,928 | 96.66% | 96.66% | 96.66% |
-| Tests to a kill | 10.82 | 9.58 | 25.05 |
-| Those of the killed mutants that are not static | 5.63 | 4.91 | 6.33 |
-| The 282 static mutants', in all | 30,055 | 27,031 | 104,620 |
-| By the first | 2,933 | 3,237 | 3,024 |
-| Killed after more than 200 tests | 54 | 43 | 202 |
-| Six jobs | 25m58s | 24m43s | 37m24s |
-| The slowest job | 5m40s | 5m20s | 10m04s |
+| | Main, 598d9de | The record, 85245ba | Emptied, with times, 1bbf77f | Emptied, aeeefb4 |
+| --- | ---: | ---: | ---: | ---: |
+| Run | 42578038632 | 42592626788 | 42595188849 | 42598144129 |
+| Killed, timed out, survived, without coverage | 5,494, 236, 191, 7 | 5,502, 228, 191, 7 | 5,494, 236, 191, 7 | 5,493, 237, 191, 7 |
+| Runtime errors | 0 | 0 | 0 | 0 |
+| Score, over 5,928 | 96.66% | 96.66% | 96.66% | 96.66% |
+| Tests to a kill | 10.82 | 9.58 | 25.05 | 25.50 |
+| Those of the killed mutants that are not static | 5.63 | 4.91 | 6.33 | 6.23 |
+| The 282 static mutants', in all | 30,055 | 27,031 | 104,620 | 107,619 |
+| By the first | 2,933 | 3,237 | 3,024 | 3,024 |
+| Killed after more than 200 tests | 54 | 43 | 202 | 199 |
+| Six jobs | 25m58s | 24m43s | 37m24s | 42m43s |
+| The slowest job | 5m40s | 5m20s | 10m04s | 10m02s |
 
-No survivor was new or gone in either sweep: 198 undetected, as on main.
+No survivor was new or gone in any of them: 198 undetected, as on main.
 
-**The failure.** The killed mutants that are not static were back where
+**The record swept.** The killed mutants that are not static were back where
 they were on vitest 4, which read 4.91 to 5.02 tests to a kill and 3,231 to
 3,257 by the first. The static ones were partly: on vitest 4 their tests
 before a kill came to 11,731 to 17,936. Thirteen static mutants of the
@@ -1193,47 +1197,41 @@ two that change between main's own sweeps, and one, `scan.ts` 281
 `at >= 0` made `true`, that all eight of main's had killed, after 4 tests on
 vitest 4.
 
-**The time lost.** With it the sweep read 25.05 tests to a kill, and its
-jobs took half as long again. A narrowed run's time is that of the few
-tests that covered the last mutant, and a static mutant runs every file
-whole, so a file a narrowed run had just made quick ran whole first,
-whatever the whole of it costs. The static mutants' tests before their
-kills went from 27,031 to 104,620, and the thirteen of `regex.ts` were
-killed after 812. The mutants that are not static went from 4.91 to 6.33,
-and the kills after more than 200 tests from 43 to 202. `scan.ts` 213
-`i <= frontLines` timed out again, and `false` there was killed after 92
-tests.
+**No record at all.** With nothing to go by, the order is the times', and
+the two sweeps read 25.05 and 25.50 tests to a kill, the static mutants'
+tests before their kills 104,620 and 107,619, and their jobs took half as
+long again as main's. `scan.ts` 213 `i <= frontLines` timed out in both,
+and the thirteen static mutants of `regex.ts` were killed after 812 tests.
+Vitest 5's cache, which keeps every file that has failed in any worker
+failed, read 10.82 on main; the record, which keeps the file that failed
+last in each worker, 9.58. The memory of a failure is most of what the
+order does, and most of all for a static mutant, which runs every file.
 
-**Not explained.** Vitest 4 kept times by the same rule, and its sweeps'
-static mutants came to 11,731 to 17,936 tests. Vitest 4.1.12, driven as
-Stryker's runner drives it on two files in a temporary folder, took a
-narrowed run's time (a file of 217 ms read 1.9 ms after a run of its one
-quick test), cleared a failure when the file passed, and recorded nothing
-for a file a run stopped by its first failure did not reach; the reporter
-here recorded the same in each of those runs. Why vitest 4's static mutants
-did well under that rule is not explained: the reports carry neither the
-order nor the times. One difference was not measured: a worker Stryker
-starts after a timeout read vitest 4's cache file, which every worker
-rewrote whole after each run, where the record here starts empty.
-
-**So the record keeps the failure alone**, and the times stay the cache's,
-on vitest 5 the dry run's, of each whole file.
+**The times are not measured.** The record of each run's time, vitest 4's
+rule in full, was never swept with a record to go with it. Vitest 4.1.12,
+driven as Stryker's runner drives it on two files in a temporary folder,
+takes a narrowed run's time (a file of 217 ms read 1.9 ms after a run of
+its one quick test), clears a failure when the file passes, and records
+nothing for a file a run stopped by its first failure did not reach; the
+reporter here records the same in each of those runs. So the static
+mutants' gap to vitest 4 may be the times, and a sweep of that record is
+what would tell.
 
 **Tests.** `tests/mutation-shards.test.ts` holds the record: a file that
 failed when the worker last ran it runs first however long it takes, and of
 two the quicker; the cache's `failed` is not read, where it has one from a
-narrowed run that a later run passed; a file a run skipped, or left pending
-or queued, keeps its verdict until a run passes it; and a vitest that starts
-has run nothing. One test runs Stryker's runner as it runs mutants, in a
-process of its own: a vitest made from this configuration with the options
-the runner gives it, and four runs narrowed by a test name pattern, after
-each of which the sequencer vitest resolved orders two files. After the run
-in which the long file failed, it runs first; after the next, in which it
-passed, it runs after the quick one, while vitest's cache still has it
-failed, which the test asserts as the reason for the record; and after a
-run of its one quick test it still runs after the quick one, by the time of
-the whole file, where the record with times ran it first. Five breaks of
-the record, put in by hand one at a time, each failed one of these tests or
-more: the failure read from the cache, the record not cleared when a vitest
-starts, the reporter not named, every state recorded, and a pass recorded
-as the failure.
+narrowed run that a later run passed; and a file a run skipped, or left
+pending or queued, keeps its verdict until a run passes it. One test runs
+Stryker's runner as it runs mutants, in a process of its own: a vitest made
+from this configuration with the options the runner gives it, and four runs
+of two files narrowed by a test name pattern, of each of which it takes
+the order the sequencer gave inside the run. After the run in which the
+long file failed it runs first; after the next, in which it passed, it runs
+after the quick one, while vitest's cache still has it failed, which the
+test asserts as the reason for the record. Five breaks of the record, put
+in by hand one at a time, each failed one of these tests or more: the
+failure read from the cache, an `onInit` that empties the record, the
+reporter not named, every state recorded, and a pass recorded as the
+failure. The `onInit` is caught only by the order inside the run: the test
+as the second and third sweeps had it asked the sequencer after each run,
+where the record was still full.

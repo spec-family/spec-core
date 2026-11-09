@@ -21,21 +21,15 @@ import { BaseSequencer, type Reporter, type TestModule, type TestSpecification }
  * lives in that process's memory, with no file to name or clean up, and dies
  * with it.
  *
- * The times stay the cache's, on vitest 5 the dry run's, of each whole file.
- * Vitest 4 took each run's, narrowed or stopped; a record of those, swept,
- * ran the long files first in a static mutant's run of every file and nearly
- * quadrupled the static mutants' tests before their kills (ADR-0007,
- * 2026-11-09).
+ * The times stay the cache's, on vitest 5 the dry run's, of each whole file,
+ * where vitest 4 took each run's, narrowed or stopped.
  */
 const failedLast = new Map<string, boolean>();
 
 /** The reporter that keeps the record above, named in the suite below. */
 export const lastRun = {
-  // A vitest that starts has run nothing, whatever one before it in the
-  // process ran.
-  onInit(): void {
-    failedLast.clear();
-  },
+  // No `onInit`: vitest 5 calls it at the start of every run, which would
+  // empty the record before each sort (ADR-0007, 2026-11-09).
   onTestModuleEnd(module: TestModule): void {
     const state = module.state();
     if (state === 'passed' || state === 'failed') failedLast.set(module.moduleId, state === 'failed');
