@@ -169,10 +169,17 @@ Each tool writes its findings in the forge's own format:
 
 | Command | GitHub | GitLab |
 | --- | --- | --- |
-| `spec-guard` | `--format github`: annotations, no upload | `--format gitlab` |
-| `spec-graph check` | `--format sarif`, uploaded to code scanning | `--format gitlab` |
+| `spec-guard` | `--format github` | `--format gitlab` |
+| `spec-graph check` | `--format github` | `--format gitlab` |
 | `spec-brief lint`, `spec-brief matrix` | `--format github` | `--format gitlab` |
-| `spec-harness premises` | its exit code and log | its exit code and log |
+| `spec-harness premises` | `--format github` | `--format gitlab` |
+
+`--format github` writes workflow commands, which GitHub turns into
+annotations on the pull request from the job's log, with no upload step.
+`--format gitlab` writes a Code Quality report. Each of the commands above
+also writes SARIF 2.1.0, `--format sarif`, for GitHub's code scanning
+([below](#github-actions)). Where `claims` is configured, `spec-guard
+claims` is one more check, in the same formats.
 
 `spec-harness premises` names the round's brief from the branch, as every
 spec-harness command does. A CI checkout is usually on no branch, so on a
@@ -180,8 +187,10 @@ detached HEAD it reads the branch the forge's CI names:
 `GITHUB_HEAD_REF`, `GITHUB_REF_NAME` on a branch push,
 `CI_MERGE_REQUEST_SOURCE_BRANCH_NAME` or `CI_COMMIT_BRANCH`
 ([ADR-0004](https://github.com/spec-family/spec-harness/blob/main/docs/adr/0004-the-active-brief-is-named-not-guessed.md)).
-The jobs below rely on that and need spec-harness 0.7.0 or later: with 0.6, a
-round's own merge request reports the premise it set out to retire as stale.
+The jobs below rely on that, and on `premises` writing a forge's format,
+and need spec-harness 0.7.0 or later: with 0.6, a round's own merge request
+reports the premise it set out to retire as stale. spec-graph's
+`--format github` needs spec-graph 0.10.0 or later.
 
 ### GitHub Actions
 
@@ -197,30 +206,24 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write # the SARIF upload
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
           cache: npm
       - run: npm ci
       - run: npx --no-install @spec-family/spec-guard --format github
+      - if: ${{ !cancelled() }}
+        run: npx --no-install @spec-family/spec-graph check --format github
       - if: ${{ !cancelled() }}
         run: npx --no-install @spec-family/spec-brief lint --format github
       - if: ${{ !cancelled() }}
         run: npx --no-install @spec-family/spec-brief matrix --format github
       - if: ${{ !cancelled() }}
-        run: npx --no-install @spec-family/spec-harness premises
-      - if: ${{ !cancelled() }}
-        run: npx --no-install @spec-family/spec-graph check --format sarif > spec-graph.sarif
-      - if: ${{ !cancelled() }}
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
-        with:
-          sarif_file: spec-graph.sarif
-          category: spec-graph
+        run: npx --no-install @spec-family/spec-harness premises --format github
 ```
 
 - The actions are pinned to commits, with the version beside each, because a
@@ -228,22 +231,35 @@ jobs:
   keep pins like these current.
 - A step stops the job when it fails; `if: ${{ !cancelled() }}` runs every
   check once whatever failed before it, and the job still fails if any did.
-- `--format github` writes workflow commands, which annotate the pull request
-  from the job's log. spec-graph writes no `github` format, so its SARIF goes
-  to code scanning through `upload-sarif@v4` (v3 is deprecated in December
-  2026). Code scanning takes an upload in a public repository, and in a
-  private one where GitHub Code Security is enabled; a private repository's
-  job also needs `actions: read`. Without code scanning, write
-  `npx --no-install @spec-family/spec-graph check --format markdown >> "$GITHUB_STEP_SUMMARY"`
-  and drop the upload and `security-events: write` with it.
-- Node 24 is the Active LTS until 20 October 2026; Node 26 becomes the Active
-  LTS on 28 October 2026.
+- The annotations need nothing but the job's log, so the job reads the
+  repository and writes nothing.
+- For code scanning instead, whose alerts stay on the lines from commit to
+  commit, write SARIF and upload it with `upload-sarif@v4` (v3 is deprecated
+  in December 2026); the job then needs `security-events: write` as well.
+  Code scanning takes an upload in a public repository, and in a private one
+  where GitHub Code Security is enabled, whose job also needs
+  `actions: read`. For spec-graph, in place of its step above:
+
+  ```yaml
+      - if: ${{ !cancelled() }}
+        run: npx --no-install @spec-family/spec-graph check --format sarif > spec-graph.sarif
+      - if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: spec-graph.sarif
+          category: spec-graph
+  ```
+
+- spec-graph also writes `--format markdown`, a table for the job summary:
+  `npx --no-install @spec-family/spec-graph check --format markdown >> "$GITHUB_STEP_SUMMARY"`.
+- Node 26 has been the Active LTS since 28 October 2026. The tools run on
+  Node 22 and later.
 
 ### GitLab CI
 
 ```yaml
 spec:
-  image: node:24
+  image: node:26
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -256,7 +272,7 @@ spec:
     - npx --no-install @spec-family/spec-graph check --format gitlab > gl-spec-graph.json || worst=$(( $? > worst ? $? : worst ))
     - npx --no-install @spec-family/spec-brief lint --format gitlab > gl-spec-brief-lint.json || worst=$(( $? > worst ? $? : worst ))
     - npx --no-install @spec-family/spec-brief matrix --format gitlab > gl-spec-brief-matrix.json || worst=$(( $? > worst ? $? : worst ))
-    - npx --no-install @spec-family/spec-harness premises || worst=$(( $? > worst ? $? : worst ))
+    - npx --no-install @spec-family/spec-harness premises --format gitlab > gl-spec-harness-premises.json || worst=$(( $? > worst ? $? : worst ))
     - exit $worst
   artifacts:
     when: always
@@ -266,9 +282,10 @@ spec:
         - gl-spec-graph.json
         - gl-spec-brief-lint.json
         - gl-spec-brief-matrix.json
+        - gl-spec-harness-premises.json
 ```
 
-- `node:24` is the Active LTS image, and the full one: spec-brief and
+- `node:26` is the Active LTS image, and the full one: spec-brief and
   spec-harness read git, which the `-slim` and `-alpine` images do not carry.
 - The job ends with the worst code, so `allow_failure: exit_codes: [1]` lets
   findings through while you adopt a tool, and a run that cannot be trusted
@@ -291,25 +308,32 @@ spec:
 checks what the repository holds for the guard: that each sibling installed
 is no older than spec-harness needs, that Claude Code's settings run the
 guard once and on a line that guards, that `disableAllHooks` does not
-switch it off, and that the branch names a brief a round can work under. It
+switch it off, that the package the Claude Code plugin's hooks run is
+installed, and that the branch names a brief a round can work under. It
 exits `1` for any of them, and its log says which
-([spec-harness's README](https://github.com/spec-family/spec-harness#doctor)).
+([spec-harness's reference](https://github.com/spec-family/spec-harness/blob/main/docs/reference/doctor.md#doctor)).
 
 - Run it without `--strict`. Where no `claude` is on the runner's `PATH`,
   the release of Claude Code cannot be told, and `--strict` fails for that
   wherever `init`'s hooks are in the settings.
-- Fetch the base under the name `.spec-harness.json` gives it, with its
-  history. A round archives its brief on its own branch before the branch
-  merges ([the tutorial, step 10](tutorial.md#10-archive-and-merge)), so its
-  last pull request names a brief spec-brief has archived, under which the
-  guard holds every write. From the spec-harness release after 0.20.0 on,
-  that brief fails nothing there where git says the branch archived it: the
-  archived file is in the head and not at the merge base of the base and the
-  head. Where the base names no commit, or the history is shallow, `doctor`
-  cannot tell, and fails, as 0.20.0 fails every round's last pull request.
-- A project that turns the Claude Code plugin on in its settings, with none
-  of `init`'s hooks, fails `doctor` on a runner, where the plugin is not
-  installed.
+- Fetch the base with its history. A round archives its brief on its own
+  branch before the branch merges
+  ([the tutorial, step 10](tutorial.md#10-archive-and-merge)), so its last
+  pull request names a brief spec-brief has archived, under which the guard
+  holds every write. From spec-harness 0.21.0 on, that brief fails nothing
+  there where git says the branch archived it: the archived file is in the
+  head and not at the merge base of the base and the head. Where the base
+  names no commit, or the history is shallow, `doctor` cannot tell, and
+  fails, as 0.20.0 fails every round's last pull request.
+- From spec-harness 0.24.0 on, the base `.spec-harness.json` names is read
+  as the remote's branch, `remotes/origin/main` for `main`, where the
+  checkout has no branch of that name, as a CI checkout has none. An earlier
+  release needs the branch made under that name.
+- On a runner, where `CI` is set as GitHub Actions and GitLab CI set it,
+  spec-harness 0.24.0 and later neither look for the Claude Code plugin nor
+  require it, so a project the plugin guards passes there. An earlier
+  release fails such a project, with none of `init`'s hooks, on every
+  runner.
 
 On GitHub Actions, `actions/checkout` fetches one commit by default, and
 `fetch-depth: 0` fetches the history of every branch and tag; in a pull
@@ -317,10 +341,11 @@ request it checks out on no branch
 ([its README](https://github.com/actions/checkout#readme), read
 2026-10-24), at the pull request's merge branch (GitHub's
 [Events that trigger workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request),
-`pull_request`). Neither page says a local branch of the base is made, so
-the job makes one from the branch the checkout fetched, which the
+`pull_request`). Neither page says a local branch of the base is made; the
 checkout's log in a release job of spec-harness's (its run of 2026-10-19)
-names as fetched by `+refs/heads/*:refs/remotes/origin/*`:
+names the branches as fetched by `+refs/heads/*:refs/remotes/origin/*`, and
+spec-harness 0.24.0 reads the base there, `base    remotes/origin/main` in
+`doctor`'s report:
 
 ```yaml
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -328,11 +353,14 @@ names as fetched by `+refs/heads/*:refs/remotes/origin/*`:
           persist-credentials: false
           fetch-depth: 0
       # ...the steps above, then:
-      - if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-        run: git branch --force main origin/main # the base .spec-harness.json names
       - if: ${{ !cancelled() }}
         run: npx --no-install @spec-family/spec-harness doctor
 ```
+
+With spec-harness 0.23 or earlier, make the branch first in a pull
+request's run, in a step before `doctor`:
+`git branch --force main origin/main`, with the base `.spec-harness.json`
+names.
 
 On Forgejo Actions each `FORGEJO_*` variable is also a `GITHUB_*` one
 (Forgejo's [Actions reference](https://forgejo.org/docs/latest/user/actions/reference/),
@@ -407,7 +435,7 @@ GitLab, a job of its own in merge request pipelines:
 
 ```yaml
 spec-base-rules:
-  image: node:24
+  image: node:26
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   script:

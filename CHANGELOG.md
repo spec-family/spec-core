@@ -101,6 +101,16 @@ copies a module names the spec-core commit in its own changelog.
   releases, and warns of what moved without failing. The concepts guide
   says what a claim is, and its links into spec-brief and spec-harness name
   the reference pages their READMEs moved those sections to.
+- The adopting guide's CI jobs give every check `--format github` or
+  `--format gitlab`: spec-graph `check` has written `github` since 0.10.0,
+  where the guide said it wrote none and uploaded its SARIF, and
+  `spec-harness premises` has written both since 0.7.0, where the guide
+  gave it its exit code and log alone. Code scanning is an option beside
+  them, with the upload pinned at spec-guard's v4.39.1. The jobs name Node
+  26, the Active LTS since 28 October 2026. `doctor` in CI is described as
+  spec-harness 0.24.0 has it: the base is read as `origin/main` where the
+  checkout has no `main`, so the step that made the branch is for 0.23 and
+  earlier, and no plugin is required on a runner.
 - The adopting guide lists what exit `2` covers as ADR-0005 has it since
   2026-10-08, an error a tool did not expect and an output its reader closed
   among them, and says why its GitLab job lets exit `1` through and never
