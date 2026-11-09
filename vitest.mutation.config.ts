@@ -1,12 +1,40 @@
 import { statSync } from 'node:fs';
 
 import { defineConfig } from 'vitest/config';
-import { BaseSequencer, type TestSpecification } from 'vitest/node';
+import { BaseSequencer, type Reporter, type TestModule, type TestSpecification } from 'vitest/node';
 
 /**
- * The order a mutant's test files run in: a file the worker's cache records as
- * failed first, as vitest has it, then the quickest first, where vitest runs
- * the longest first.
+ * Whether each test file failed when this process last ran it, as vitest 4's
+ * cache had it and vitest 5's does not.
+ *
+ * Stryker narrows each mutant's run to the tests that cover it, by a test name
+ * pattern. Vitest 5 counts such a run as partial, and its cache keeps a
+ * failure from one until a run of the whole file passes, and it reads back
+ * what the other workers write to the same cache file. In a sweep every run
+ * but the first is narrowed, so a file that killed one mutant, in any worker,
+ * stayed failed for every mutant after it, and the order lost what it knew of
+ * the last run: the file that killed the last mutant (ADR-0008, amended
+ * 2026-11-08). So the order keeps its own record. Vitest calls the sequencer
+ * and the reporters in the one process that drives the worker, so the record
+ * lives in that process's memory, with no file to name or clean up, and dies
+ * with it, as vitest 4's did. A file that passed or failed in a run has that
+ * verdict until a run runs it again; a file the run skipped or did not reach
+ * keeps the one it had.
+ */
+const failedLast = new Map<string, boolean>();
+
+/** The reporter that keeps the record above, named in the suite below. */
+export const lastRun = {
+  onTestModuleEnd(module: TestModule): void {
+    const state = module.state();
+    if (state === 'passed' || state === 'failed') failedLast.set(module.moduleId, state === 'failed');
+  },
+} satisfies Reporter;
+
+/**
+ * The order a mutant's test files run in: a file that failed when this process
+ * last ran it first, as vitest 4 had it, then the quickest first, where vitest
+ * runs the longest first.
  *
  * Stryker gives a mutant the files of the tests that cover it, every file for
  * a static mutant, runs them one after another in one worker and stops at the
@@ -41,10 +69,11 @@ export class QuickestFirst extends BaseSequencer {
   override async sort(files: TestSpecification[]): Promise<TestSpecification[]> {
     const { cache } = this.ctx;
     const rank = (file: TestSpecification): [number, number] => {
-      // What vitest's own sequencer asks its cache; a test holds the two together.
+      // What vitest's own sequencer asks its cache; a test holds the two
+      // together. Its `failed` is not read: that is the record's.
       const last = cache.getTestSpecificationResult(file);
       if (last === undefined) return [2, -(statSync(file.moduleId, { throwIfNoEntry: false })?.size ?? 0)];
-      return [last.failed ? 0 : 1, last.duration];
+      return [failedLast.get(file.moduleId) === true ? 0 : 1, last.duration];
     };
     const ranked = files.map((file) => ({ file, rank: rank(file) }));
     return ranked.sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1]).map(({ file }) => file);
@@ -54,7 +83,7 @@ export class QuickestFirst extends BaseSequencer {
 /**
  * The suite as Stryker runs it: the one vitest.config.ts runs, less two
  * files, without v8 coverage, which Stryker replaces with its own per test,
- * in the order above and with a reporter named.
+ * in the order above and with its reporters named.
  *
  * mutation-shards.test.ts tests the CI script that splits the sweep and
  * merges it back, and the order above. It reaches nothing under src/, so it
@@ -79,6 +108,7 @@ export default defineConfig({
     // of main's sweep of 89bcf7f, where GitHub uploads 1MiB of a step's
     // summary. The default reporter writes to the worker's output, as it
     // did, which Stryker shows only for a worker that exits unexpectedly.
-    reporters: ['default'],
+    // The other keeps the order's record and writes nothing.
+    reporters: ['default', lastRun],
   },
 });
