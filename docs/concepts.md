@@ -40,7 +40,7 @@ A number in a brief's front matter: rounds in the same wave run side by side,
 so no two of them may be able to write the same file. `spec-brief matrix`
 checks the briefs of a wave against each other as globs, and `spec-brief
 schedule` computes the waves from the dependencies and the collisions
-([spec-brief](https://github.com/spec-family/spec-brief#spec-brief-schedule),
+([spec-brief](https://github.com/spec-family/spec-brief/blob/main/docs/reference/commands.md#spec-brief-schedule),
 [ADR-0011](https://github.com/spec-family/spec-brief/blob/main/docs/adr/0011-waves-are-computed-not-guessed.md)).
 
 ### dependsOn
@@ -48,7 +48,7 @@ schedule` computes the waves from the dependencies and the collisions
 The ids of the briefs a brief runs after. A brief is *ready* when every brief
 it depends on is archived and it is neither a draft nor deferred, and it
 belongs in a later wave than every dependency still live
-([spec-brief](https://github.com/spec-family/spec-brief#spec-brief-list)).
+([spec-brief](https://github.com/spec-family/spec-brief/blob/main/docs/reference/commands.md#spec-brief-list)).
 
 ## Scope
 
@@ -214,7 +214,7 @@ ruling; otherwise it moves the brief to the archive directory with status
 `archived`, a banner and an integrity hash, in one transaction. An archived
 brief is a record, frozen: every tool reads it as history, not as a retired
 decision
-([spec-brief](https://github.com/spec-family/spec-brief#spec-brief-archive-brief),
+([spec-brief](https://github.com/spec-family/spec-brief/blob/main/docs/reference/commands.md#spec-brief-archive-brief),
 [ADR-0004](https://github.com/spec-family/spec-brief/blob/main/docs/adr/0004-archival-is-a-planned-transaction.md),
 [spec-graph ADR-0011](https://github.com/spec-family/spec-graph/blob/main/docs/adr/0011-a-record-is-not-a-specification.md)).
 
@@ -223,7 +223,7 @@ decision
 The words that close a task box without ticking it: a note under the box that
 starts with `**Delegated`, `**Accepted debt` or `**Rejected`
 (`archiving.dispositions`), saying where the work went or why it was not done
-([spec-brief](https://github.com/spec-family/spec-brief#spec-brief-archive-brief)).
+([spec-brief](https://github.com/spec-family/spec-brief/blob/main/docs/reference/commands.md#spec-brief-archive-brief)).
 
 ## The agent's side
 
@@ -244,7 +244,7 @@ left out is named by path
   `@spec-family/spec-harness/spec-brief-plugin`, which reads signed rulings,
   so the archive accepts a protected file a ruling allows, and says
   `spec-harness waives` where it does
-  ([spec-brief](https://github.com/spec-family/spec-brief#plugins),
+  ([spec-brief](https://github.com/spec-family/spec-brief/blob/main/docs/reference/plugins.md#plugins),
   [ADR-0007](https://github.com/spec-family/spec-brief/blob/main/docs/adr/0007-integrations-are-plugins.md)).
 - **The Claude Code plugin** is the spec-harness repository installed into
   Claude Code (`/plugin install spec-harness@spec-tools`): four skills, the
