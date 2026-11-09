@@ -31,6 +31,25 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Changed
 
+- **The mutation sweep again runs first the test file that failed when the
+  worker last ran it, as it did on vitest 4.** Vitest 5's cache, which the
+  order in `vitest.mutation.config.ts` read, keeps a failure from a run
+  narrowed by a test name pattern, or stopped at its first failure, until a
+  run of the whole file passes, and shares it between Stryker's workers, so
+  a file that killed one mutant ran first for every mutant after it. Main's
+  sweeps on vitest 5 had a killed mutant run 10.46 to 11.18 tests before its
+  kill, where those on vitest 4 had 6.89 to 7.91, and
+  `src/markdown/scan.ts` 213 `i <= frontLines`, killed by its sixth test on
+  vitest 4, timed out or stopped its worker. The order keeps its own record
+  of each file's verdict now, by a reporter, `lastRun`, in the same file:
+  the sweep of it read 9.58, and the mutants that are not static 4.91, as on
+  vitest 4, with `scan.ts` 213 killed by its sixth test again; a second
+  sweep read 10.03. The times stay the cache's: a record of each run's time
+  as well, as vitest 4 kept them, read 9.60 (ADR-0007 and ADR-0008, amended
+  2026-11-09). No module changes, and no file's hash.
+  Upgrading: nothing for a tool's user. A tool takes the record with its
+  move to vitest 5, in each configuration file that copies `QuickestFirst`.
+
 - **`links.ts` and `scan.ts` in `markdown` and `lines.ts` in `text` change
   in their text and not in what they answer.** The lines whose mutants a
   sweep told apart only by its clock are written again, or marked for the
