@@ -444,12 +444,14 @@ at its end, and `QuickestFirst` reads the record where it read the cache's
 `failed`. Vitest 5's cache keeps a failure from a run narrowed by a test
 name pattern, or stopped at its first failure, until a run of the whole
 file passes, and shares it between Stryker's workers, so the order had lost
-the file that killed the last mutant. The times stay the cache's, on vitest
-5 each whole file's from the dry run; a record of each run's time as well,
-vitest 4's rule in full, is not measured (ADR-0007). The record uses the
-reporter interface of vitest 3 and later, `onTestModuleEnd` and
-`TestModule.state()`, so a tool can take it on vitest 4.1 too, where the
-cache's times are each run's. The reporter has no `onInit`: vitest 5 calls
+the file that killed the last mutant. The record keeps each file's time
+too, from the last run that ran it, vitest 4's rule in full, and the order
+ranks by it where it has one and by the cache's, on vitest 5 each whole
+file's from the dry run, otherwise; the pull request's last sweep measures
+that against two sweeps of the failure alone (ADR-0007). The record uses
+the reporter interface of vitest 3 and later, `onTestModuleEnd`,
+`TestModule.state()` and `TestModule.diagnostic()`, so a tool can take it
+on vitest 4.1 too. The reporter has no `onInit`: vitest 5 calls
 that at the start of every run, and two sweeps of spec-core with one that
 cleared the record sorted every run with it empty, at 25.05 and 25.50 tests
 to a kill.
@@ -460,12 +462,11 @@ as well, with a test of it (`tests/mutation-shards.test.ts` in spec-graph
 and spec-harness, `tests/mutation-order.test.ts` in spec-brief and
 spec-guard). The pull request that takes a tool to vitest 5 takes the
 record in the same change, in each configuration file that has the
-sequencer: the `failedLast` map and the `lastRun` reporter above the class,
-the class's rank reading `failedLast` where it read `last.failed`, `lastRun`
-named after `'default'` in the suite's `reporters`, and the tests, whose
-fixtures give the record a file's end as vitest gives it a reporter, and
-give it a run in which every timed file passed before each test, with no
-`onInit` to reset it. The test through vitest takes the order the sequencer
+sequencer: the `lastRuns` map and the `lastRun` reporter above the class,
+the class's rank as above, `lastRun` named after `'default'` in the
+suite's `reporters`, and the tests, whose fixtures give the record a file's
+end as vitest gives it a reporter, each test in a folder of its own, with
+no `onInit` to reset the record. The test through vitest takes the order the sequencer
 gives inside each run, which is where a record emptied at the start of a
 run shows; asked after the run, the sequencer still finds it full. Each
 configuration file is its own module, so spec-brief's two keep a record
