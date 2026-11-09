@@ -2,15 +2,16 @@
 
 Ten steps through the whole loop on a made-up repository: two ADRs, a small
 C# tree, one defect, and one round of agent work to fix it, from the brief to
-the archive. Nothing needs to build; the tools read the text.
+the archive. After them, one claim is followed through the three tools that
+read it. Nothing needs to build; the tools read the text.
 
 Every output below comes from running these steps against the published
-packages, spec-brief 0.3.0, spec-graph 0.10.0, spec-guard 0.17.0 and
-spec-harness 0.7.0, trimmed where a line says `…`. Those were published as
-`@descent-vtt/<name>`; the commands and the output below name each package
-as the family publishes it from 2026-10-26, `@spec-family/<name>`
-([Names](adopting.md#names)). The words in italics are defined in
-[concepts](concepts.md).
+packages, spec-brief 0.13.0, spec-graph 0.24.0, spec-guard 0.33.0 and
+spec-harness 0.24.0, trimmed where a line says `…`. CI replays every step
+against those releases on each change to this repository, and fails where an
+output no longer reads as shown here
+([`scripts/tutorial.mjs`](https://github.com/spec-family/spec-core/blob/main/scripts/tutorial.mjs)).
+The words in italics are defined in [concepts](concepts.md).
 
 ## 1. The repository
 
@@ -90,9 +91,9 @@ create  .spec-graph.json
 create  .spec-harness.json
         rounds are measured from main, the branch init runs on: no remote records a default branch (refs/remotes/origin/HEAD); …
 create  .claude/settings.json
-        the guard hooks, run with node from the project's install: …
+        the guard hooks, run with node from the project's install: a PreToolUse hook refuses writes to protected files; a PostToolUse hook warns about writes outside the scope; a SessionStart hook says, as a session starts, what would hold every write of it
 create  .mcp.json
-        the spec-harness MCP server, run with node from the project's install: …
+        the spec-harness MCP server, run with node from the project's install: start_round, check_path, request_escalation, audit_round, list_rounds
 advise  .git/hooks/pre-commit
         no pre-commit hook runs spec-harness: one refuses a commit that changes what the active brief protects, for any agent or none, a shell's writes included; run spec-harness init --git-hook --write to add it
 advise  .github/allowed_signers
@@ -120,22 +121,23 @@ $ npx --no-install @spec-family/spec-harness doctor
 root    …/ledger
 branch  main
 brief   (none named)
-base    main (.spec-harness.json), merge base 13a2b7b59d70
+base    main (.spec-harness.json), merge base 7fc662237b37
 signers .github/allowed_signers is on main
         note: signers whose key is not a FIDO2 key: person@example.test (ssh-ed25519, line 1). …
 plugin  spec-brief loads spec-harness's plugin (.spec-brief.json): its archive accepts a protected file a signed ruling allows
 claude  init's entries: the guard hooks in .claude/settings.json, the server in .mcp.json
-        Claude Code 2.1.235 runs the hooks, which need 2.1.139 or later
+        Claude Code … runs the hooks, which need 2.1.139 or later
 git     no pre-commit hook runs spec-harness (.git/hooks/pre-commit): …
 
-found     spec-brief  … (0.3.0)
-found     spec-graph  … (0.10.0)
-found     spec-guard  … (0.17.0)
+found     spec-brief  … (0.13.0)
+found     spec-graph  … (0.24.0)
+found     spec-guard  … (0.33.0)
 ```
 
 The note is about the throwaway key, and the `git` line about the hook this
 tutorial goes without; neither fails `doctor`. A Claude Code older than
-2.1.139 does, since it runs every write unguarded.
+2.1.139 does, since it runs every write unguarded; the trimmed line names the
+release on your `PATH`.
 
 ## 3. Hold the code to its ADRs
 
@@ -149,7 +151,7 @@ spec-guard 2 specs · 2 assertions · javascript
 ✔ docs/adr/0001-dependencies-point-inward.md:12  @assert-layers src must keep its layers in order, Ledger.Domain < Ledger.Application < Ledger.Infrastructure (0 violating files)
 ✔ docs/adr/0002-money-is-decimal.md:13  @assert-absence "double" (0 matches) in src/Ledger.Domain
 
-2 passed · 17ms
+2 passed · 26ms
 ✔ every spec assertion holds
 ```
 
@@ -166,7 +168,7 @@ spec-guard 2 specs · 2 assertions · javascript
     reason: dependencies point inward
       src/Ledger.Domain/Account.cs:1:1  Ledger.Domain -> Ledger.Infrastructure: using Ledger.Infrastructure
 
-1 passed · 1 failed · 17ms
+1 passed · 1 failed · 23ms
 ```
 
 Exit 1. Take the line out again. `prove` shows each rule a violation of
@@ -176,7 +178,7 @@ itself, in memory, so a rule that cannot fail is found before it is trusted:
 $ npx --no-install @spec-family/spec-guard prove
 spec-guard prove 2 specs · 2 rules
 
-2 seen to fail · 20ms
+2 seen to fail · 28ms
 ✔ every rule in force was seen to fail
 ```
 
@@ -187,28 +189,28 @@ is constrained by ADR-0001, which spec-graph reads as `assumes`:
 
 ```console
 $ npx --no-install @spec-family/spec-graph check
-spec-graph 2 documents - 0 items - 1 relation - 0 open
+spec-graph 2 documents · 0 items · 1 relation · 0 open
 
-18.85ms
-ok the specification graph is consistent
+24.98ms
+✔ the specification graph is consistent
 ```
 
 Mark ADR-0001 `superseded` and the ADR resting on it is reported:
 
 ```console
 $ npx --no-install @spec-family/spec-graph check
-spec-graph 2 documents - 0 items - 1 relation - 0 open
+spec-graph 2 documents · 0 items · 1 relation · 0 open
 
-x docs/adr/0002-money-is-decimal.md:11:12  stale-premise
+✖ docs/adr/0002-money-is-decimal.md:11:12  stale-premise
     ADR-0002 assumes ADR-0001, which no longer holds
-    | docs/adr/0001-dependencies-point-inward.md:2:9  ADR-0001 is retired ("superseded")
-    > re-check this dependency: the constraint it assumes may have been lifted when ADR-0001 was retired
+    ↳ docs/adr/0001-dependencies-point-inward.md:2:9  ADR-0001 is retired ("superseded")
+    → re-check this dependency: the constraint it assumes may have been lifted when ADR-0001 was retired
 
-1 error - 19.29ms
-x the specification graph is inconsistent
+1 error · 22.91ms
+✖ the specification graph is inconsistent
 ```
 
-Put the status back.
+Exit 1. Put the status back.
 
 ## 5. Write a brief
 
@@ -491,9 +493,9 @@ briefs/001_compute-interest-in-decimal.md
 
 banner:
   <!-- spec-brief:banner -->
-  > **Archived 2026-09-30.**
+  > **Archived 2026-11-09.**
   > Interest is computed in decimal.
-  > Recorded at commit `f044e51`: 3 files changed, +10 −3.
+  > Recorded at commit `7c4d711`: 3 files changed, +10 −2.
   > Relative links were rewritten to resolve from `briefs/archive/` (1); no other word changed.
   > The body below describes the tree before execution and is not maintained.
   <!-- /spec-brief:banner -->
@@ -509,16 +511,16 @@ moved briefs/001_compute-interest-in-decimal.md -> briefs/archive/001_compute-in
 …
 nothing was committed; review the change and commit it with the round
 $ git add -A && git commit -m "Archive brief 001"
-$ git switch main && git merge --no-ff brief/001-compute-interest
+$ git switch main && git merge --no-ff -m "Merge brief 001: compute interest in decimal" brief/001-compute-interest
 $ git log --oneline --graph -6
-*   12b039c Merge brief 001: compute interest in decimal
+*   5176739 Merge brief 001: compute interest in decimal
 |\
-| * 951fdb7 Archive brief 001
-| * f044e51 Compute interest in decimal (brief 001)
-| * 0180393 ruling R-001-1: allow
+| * 9652fea Archive brief 001
+| * 7c4d711 Compute interest in decimal (brief 001)
+| * 18bc2fa ruling R-001-1: allow
 |/
-* 079d71e Briefs 001 and 002; 001 approved
-* 13a2b7b Configure the spec tools; Pat signs rulings
+* 09550f1 Briefs 001 and 002; 001 approved
+* 7fc6622 Configure the spec tools; Pat signs rulings
 $ npx --no-install @spec-family/spec-brief list --archived
 ID   STATUS    WAVE  TASKS  READY  TITLE
 002  draft     2     0/2    no     Record every transfer
@@ -546,7 +548,7 @@ commit. Its own rules pass; `main`'s do not:
 $ npx --no-install @spec-family/spec-guard
 spec-guard 2 specs · 1 assertion · javascript
 
-1 passed · 11ms
+1 passed · 13ms
 ✔ every spec assertion holds
 $ git worktree add --detach ../base main
 $ npx --no-install @spec-family/spec-guard "../base/docs/adr/**/*.md"
@@ -558,9 +560,227 @@ spec-guard 2 specs · 2 assertions · javascript
     reason: dependencies point inward
       src/Ledger.Domain/Account.cs:1:1  Ledger.Domain -> Ledger.Infrastructure: using Ledger.Infrastructure
 
-1 passed · 1 failed · 18ms
+1 passed · 1 failed · 42ms
 ```
 
 [Adopting](adopting.md) has both as jobs for GitHub Actions and GitLab CI,
 and the forge settings that keep an agent from changing the rules it is
 checked against.
+
+## One claim, three tools
+
+A specification can say how far each thing it promises holds, with a label
+in code at the head of a list item: `Specified`, `Implemented`. Three tools
+read the same claim, each for its own question: spec-guard whether it has
+the evidence its label asks for, spec-graph what a change did to it, and
+spec-brief whether the round that set out to raise it did.
+
+On `main` again, Pat drafts the specification brief 002's round will build,
+`docs/spec/transfers.md`, with one claim, named so that a brief can point at
+it:
+
+```markdown
+# Transfers
+
+Status: Draft
+
+What the ledger promises about transfers. Each claim opens with how far it
+holds: `Specified` is promised and not built, `Implemented` is built and
+tested.
+
+<!-- @spec-item id="transfer-log" -->
+- `Specified`: every transfer writes one entry to the transfer log.
+```
+
+and a register of the decisions still to make, `docs/decisions.md`:
+
+```markdown
+# Decisions to make
+
+| ID | Status | Decision |
+| --- | --- | --- |
+| log-retention | Proposed | How long the transfer log is kept |
+```
+
+Each tool is told what the labels mean. spec-guard, in a new
+`.spec-guard.json`, which label needs a test, and how a test's name starts:
+
+```json
+{
+  "claims": {
+    "files": ["docs/spec/*.md"],
+    "labels": { "Implemented": { "evidence": "test" }, "Specified": {} },
+    "testPrefixes": ["public void "]
+  }
+}
+```
+
+spec-graph, in `.spec-graph.json`, which label leaves work open:
+
+```json
+{
+  "historyPatterns": ["briefs/archive/**"],
+  "claims": {
+    "files": ["docs/spec/*.md"],
+    "labels": { "Implemented": "done", "Specified": "open" }
+  }
+}
+```
+
+and spec-brief the same, with the status that settles a register row, in two
+keys added to `.spec-brief.json`:
+
+```json
+{
+  "claims": { "labels": { "Implemented": "done", "Specified": "open" } },
+  "registers": { "settled": ["accepted"] }
+}
+```
+
+Brief 002's front matter names the claim its round raises and the row it
+waits on, and its scope takes in the tests and the specification, whose label
+the round is to raise:
+
+```yaml
+status: draft
+date: 2026-11-09
+type: feature
+wave: 2
+affectedFiles: [src/Ledger.Application/**, src/Ledger.Infrastructure/TransferLog.cs, tests/**, docs/spec/transfers.md]
+protectedFiles: [src/Ledger.Domain/**]
+raises: [docs/spec/transfers.md#transfer-log]
+awaits: [docs/decisions.md#log-retention]
+```
+
+Pat commits the draft. `Specified` asks for no evidence, so the claim holds
+as it stands:
+
+```console
+$ npx --no-install @spec-family/spec-guard claims
+spec-guard claims 1 document
+
+options from .spec-guard.json: claims
+
+1 claim: Implemented 0, Specified 1 · 9ms
+✔ every claim has the evidence its label asks for
+○ 2 labels of the vocabulary stand in prose and are no claims, which only a list item that opens with one is; --verbose says where
+$ npx --no-install @spec-family/spec-guard claims --verbose
+…
+○ 2 labels of the vocabulary stand in prose and are no claims, which only a list item that opens with one is:
+    docs/spec/transfers.md:6:8  Specified
+    docs/spec/transfers.md:6:47  Implemented
+```
+
+The two labels in the sentence that explains them are no claims, and nothing
+holds them to anything. The note counts them, `--verbose` says where, and
+neither changes the exit code: it is there for a claim written in a sentence
+by mistake, which would otherwise pass unseen.
+
+Pat sets brief 002 `active` before deciding how long the log is kept, and
+lint stops there. A draft may wait on an open row, with a warning; an active
+brief may not:
+
+```console
+$ npx --no-install @spec-family/spec-brief lint
+briefs/002_record-every-transfer.md
+  …
+  9  error    awaits "docs/decisions.md#log-retention", which is "proposed"  awaits
+              the round starts once the row is "accepted": settle it first, or keep this brief a draft until it is
+
+1 error, 0 warnings, 2 notes in 2 brief(s)
+```
+
+Exit 1. Pat accepts the decision, writing it into its row -
+`| log-retention | Accepted | The transfer log is kept seven years |` -
+accepts the specification, `Status: Accepted`, and commits; the agent starts
+the round:
+
+```console
+$ npx --no-install @spec-family/spec-brief lint
+briefs/002_record-every-transfer.md
+  …
+
+0 errors, 0 warnings, 2 notes in 2 brief(s)
+$ git add -A && git commit -m "Brief 002 approved; the log is kept seven years"
+$ git switch -c brief/002-record-every-transfer
+```
+
+The agent adds the log behind an interface in the application layer, so
+ADR-0001 still holds, writes a test for it, ticks both boxes, and commits.
+The archive refuses the round all the same, since the claim it raises still
+says `Specified`:
+
+```console
+$ npx --no-install @spec-family/spec-brief archive 002 --dry-run --summary "Every transfer is logged."
+cannot archive briefs/002_record-every-transfer.md:
+briefs/002_record-every-transfer.md
+  8  error    raises "docs/spec/transfers.md#transfer-log", which is still "Specified"  claim-not-raised
+              raise it to "Implemented" once its evidence is in, or drop it from raises if this round does not raise it
+```
+
+Raising the label is the round's work, and spec-guard holds the raised label
+to its evidence. Raised with nothing under it, the claim fails:
+
+```console
+$ npx --no-install @spec-family/spec-guard claims
+spec-guard claims 1 document
+
+✖ docs/spec/transfers.md:10  `Implemented` needs a test, and no directive under the claim names one (public void )  unevidenced-claim
+    hint: write a directive under the claim that counts the test, as <!-- @assert-count target="..." symbol="fn test_..." min="1" -->, or lower the label
+
+options from .spec-guard.json: claims
+
+1 claim: Implemented 1, Specified 0 · 8ms
+✖ 1 claim finding
+○ 2 labels of the vocabulary stand in prose and are no claims, which only a list item that opens with one is; --verbose says where
+```
+
+With a directive under it that counts the test, in a document in force, it
+holds, and the archive takes the round:
+
+```markdown
+<!-- @spec-item id="transfer-log" -->
+- `Implemented`: every transfer writes one entry to the transfer log.
+  <!-- @assert-count target="tests" symbol="public void Transfer_writes_one_entry" min="1" -->
+```
+
+```console
+$ npx --no-install @spec-family/spec-guard claims
+spec-guard claims 1 document
+
+options from .spec-guard.json: claims
+
+1 claim: Implemented 1, Specified 0 · 18ms
+✔ every claim has the evidence its label asks for
+○ 2 labels of the vocabulary stand in prose and are no claims, which only a list item that opens with one is; --verbose says where
+$ git commit -am "Raise the transfer-log claim"
+$ npx --no-install @spec-family/spec-brief archive 002 --dry-run --summary "Every transfer is logged."
+would move briefs/002_record-every-transfer.md -> briefs/archive/002_record-every-transfer.md
+…
+```
+
+What the work did to the documents, from the specification Pat drafted to
+the round's last commit, is spec-graph's `diff` of two exports:
+
+```console
+$ git worktree add --detach ../draft main~1
+$ npx --no-install @spec-family/spec-graph graph --root ../draft --graph-format json > ../draft.json
+$ npx --no-install @spec-family/spec-graph graph --graph-format json > ../head.json
+$ npx --no-install @spec-family/spec-graph diff ../draft.json ../head.json
+2 documents and 1 claim label changed.
+
+Documents
+  ~ log-retention  draft -> active; status Proposed -> Accepted; retitled "The transfer log is kept seven years"
+  ~ transfers  draft -> active; status Draft -> Accepted
+
+Claims
+  raised      transfers: "`Implemented`: every transfer writes one entry to the transfer log." (Specified -> Implemented)
+```
+
+A register row is a document to spec-graph, so the decision's row rose with
+Pat's approval, retitled by the answer written into it, beside the
+specification's `Status:` label; the claim's label rose with the round. A
+label lowered, or a document retired, is listed the same way. `diff` exits 0 whatever changed: it describes, and the
+checks gate. In CI, `spec-guard claims` joins the checks once `claims` is
+configured, and the diff of the base branch and the change can go to the job
+summary with `--format markdown`.

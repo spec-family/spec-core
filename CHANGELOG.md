@@ -91,6 +91,16 @@ copies a module names the spec-core commit in its own changelog.
   span the tools stay here. The two clauses that sent a reader to a tool's
   README for its severities and its status keys name its reference
   documents.
+- The tutorial is recorded again, at spec-brief 0.13.0, spec-graph 0.24.0,
+  spec-guard 0.33.0 and spec-harness 0.24.0, where it named 0.3.0, 0.10.0,
+  0.17.0 and 0.7.0, and closes with one claim followed through spec-guard
+  `claims`, spec-graph `diff` and spec-brief's `raises` and `awaits`. The
+  Tutorial workflow replays every step against the releases the tutorial
+  names on each change, and fails where an output reads otherwise
+  (`scripts/tutorial.mjs`); each Monday it replays against npm's latest
+  releases, and warns of what moved without failing. The concepts guide
+  says what a claim is, and its links into spec-brief and spec-harness name
+  the reference pages their READMEs moved those sections to.
 - The adopting guide lists what exit `2` covers as ADR-0005 has it since
   2026-10-08, an error a tool did not expect and an output its reader closed
   among them, and says why its GitLab job lets exit `1` through and never

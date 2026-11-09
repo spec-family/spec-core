@@ -1,0 +1,62 @@
+name: Tutorial
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Mondays, against npm's latest releases: off the hour, when GitHub's
+  # scheduled runs queue.
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: tutorial-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Nothing here writes to the repository.
+permissions:
+  contents: read
+
+jobs:
+  # docs/tutorial.md says its outputs come from the releases it names. This
+  # installs those releases in a repository built outside the checkout,
+  # replays every step, and fails where an output reads otherwise than the
+  # document has it (scripts/tutorial.mjs). It needs no install of this
+  # repository: the script is Node alone, and fetches the four packages.
+  tutorial:
+    name: tutorial
+    if: ${{ github.event_name != 'schedule' }}
+    runs-on: ubuntu-24.04
+    # Headroom for a bad runner, not a budget: the replay installs four
+    # packages and runs about sixty commands, a minute or two.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Replay the tutorial against the releases it names
+        run: node scripts/tutorial.mjs --summary "$GITHUB_STEP_SUMMARY"
+
+  # The same replay against npm's latest release of each tool. Where one has
+  # moved past the release the tutorial names, this says so and lists every
+  # output that now reads otherwise, as warnings and in the job summary, and
+  # fails nothing: the tutorial is re-recorded on purpose, by a change that
+  # names the new releases, which the job above then holds.
+  latest:
+    name: tutorial (latest)
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Replay the tutorial against npm's latest releases
+        run: node scripts/tutorial.mjs --versions latest --warn --summary "$GITHUB_STEP_SUMMARY"
