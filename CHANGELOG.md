@@ -85,6 +85,12 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Documentation
 
+- ADR-0005 says where a tool's documentation lives: its README is a front
+  page, and its full reference is in its repository's `docs/reference/`,
+  published in its package and linked relatively, while the guides that
+  span the tools stay here. The two clauses that sent a reader to a tool's
+  README for its severities and its status keys name its reference
+  documents.
 - The adopting guide's CI jobs give every check `--format github` or
   `--format gitlab`: spec-graph `check` has written `github` since 0.10.0,
   where the guide said it wrote none and uploaded its SARIF, and
