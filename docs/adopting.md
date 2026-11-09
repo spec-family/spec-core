@@ -11,6 +11,9 @@ nothing about the first.
 | run rounds of work from briefs, some in parallel | `@spec-family/spec-brief` | `spec-brief lint`, `spec-brief matrix` |
 | let agents run those rounds inside the lines | all of the above and `@spec-family/spec-harness` | the above and `spec-harness premises`, plus `spec-harness init --write` once |
 
+The [overview](overview.md#which-problem-which-tool) goes from the problem
+you have to the tool and the rule that answers it, document by document.
+
 Node 22 or later, whatever language the repository is written in. A
 repository with no JavaScript of its own, such as a .NET solution, keeps a
 `package.json` with `"private": true` and the tools as its only
@@ -504,3 +507,7 @@ once the person signs the rewritten commit that holds its row.
 - Catch two rounds that touch different files and still conflict in meaning.
 - Stop an agent that writes files through a shell. The hooks are guardrails;
   the audit and the archive, run on commits, are the gates.
+
+The [overview](overview.md#what-the-tools-do-not-do) has the whole list,
+what a ruling does not prove and which agent the guard works under among it,
+and how the tools differ from their neighbours.
