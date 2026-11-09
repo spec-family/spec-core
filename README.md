@@ -57,6 +57,9 @@ What the family shares, whatever you install ([ADR-0005](docs/adr/0005-the-famil
 
 Why five tools and not the eleven once planned: [ADR-0006](docs/adr/0006-five-tools-not-eleven.md). The family's documentation:
 
+- [Overview](docs/overview.md): which document each tool keeps true, which
+  problem each answers, how the family differs from its neighbours, and what
+  the tools do not do.
 - [Adopting](docs/adopting.md): from one tool to the whole loop, CI on GitHub
   Actions and GitLab CI, and the forge settings for a repository where agents
   write most of the code.

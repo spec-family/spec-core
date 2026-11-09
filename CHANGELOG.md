@@ -104,6 +104,18 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Documentation
 
+- **An overview of the family, `docs/overview.md`, for a reader who has
+  never met it**: the problem first, one sentence for the family, the eight
+  kinds of document the tools keep true with the tool and the rule for each,
+  which problem each tool answers, the neighbours (Spec Kit, OpenSpec,
+  Archgate, Mneme, adrkit, DocGuard, ctxgrd, Trailbun, spec-gates,
+  dependency-cruiser and import-linter) as each project's own repository or
+  documentation described itself on 2026-11-09, with the link, and what the
+  tools do not do: the guard before a write works under Claude Code alone, a
+  write through a shell passes it, and a ruling proves the agent did not sign
+  it, not that two people reviewed. Each figure about the family links to
+  where it is measured: the registry's manifests, and the mutation sweeps of
+  main on 2026-11-09. The README and the adopting guide link to it.
 - ADR-0005 says where a tool's documentation lives: its README is a front
   page, and its full reference is in its repository's `docs/reference/`,
   published in its package and linked relatively, while the guides that
