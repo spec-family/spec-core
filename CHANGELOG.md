@@ -116,6 +116,12 @@ copies a module names the spec-core commit in its own changelog.
   it, not that two people reviewed. Each figure about the family links to
   where it is measured: the registry's manifests, and the mutation sweeps of
   main on 2026-11-09. The README and the adopting guide link to it.
+- The concepts guide defines the words the tools' claims and evidence brought
+  in, each as the tools read it and with a link to the reference page that
+  owns it: `raises` and `awaits`, label and baseline, and, in a new section,
+  lifecycle, record, obligation, checklist, ledger, register, protocol,
+  figure, commit reference, orientation document and directive. No heading
+  or anchor that was there moves.
 - ADR-0005 says where a tool's documentation lives: its README is a front
   page, and its full reference is in its repository's `docs/reference/`,
   published in its package and linked relatively, while the guides that
