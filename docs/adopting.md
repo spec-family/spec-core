@@ -311,7 +311,7 @@ guard once and on a line that guards, that `disableAllHooks` does not
 switch it off, that the package the Claude Code plugin's hooks run is
 installed, and that the branch names a brief a round can work under. It
 exits `1` for any of them, and its log says which
-([spec-harness's README](https://github.com/spec-family/spec-harness#doctor)).
+([spec-harness's reference](https://github.com/spec-family/spec-harness/blob/main/docs/reference/doctor.md#doctor)).
 
 - Run it without `--strict`. Where no `claude` is on the runner's `PATH`,
   the release of Claude Code cannot be told, and `--strict` fails for that
