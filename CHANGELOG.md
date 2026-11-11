@@ -104,6 +104,14 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Documentation
 
+- The overview's *Measured* section no longer copies each repository's
+  mutation score, mutants, commit and run from one day's sweeps, which every
+  release left behind. It links, for each repository, to where the score is
+  kept - a tool's README, spec-core's ADR-0007 record - and to the runs of
+  its sweep on main, and says which pushes run it: every push, except
+  spec-harness's full sweep, which runs where a push changes what only it
+  reads and each Monday. `tests/overview.test.ts` fails a percentage, a
+  count, a run, a commit or a release written there again.
 - ADR-0005 adds `ignoreStatus` to where a status is read: spec-guard and
   spec-graph each take the key, `true` for every document or an array of
   `path`-dialect globs for some, and read a document it names as one that

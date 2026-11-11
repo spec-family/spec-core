@@ -254,23 +254,26 @@ the two run side by side.
 
 ## Measured
 
-Each figure links to where it is measured.
+Each figure is kept where it is measured, and this page links there rather
+than repeating it, so that a release cannot leave a copy behind.
 
 - **No runtime dependencies**: `dependencies` is empty in each package's
   manifest on the registry, linked at the top of this page.
 - **Published by CI, with provenance**: each release on npm carries npm's
   provenance attestation (`dist.attestations` in the same manifests).
-- **Mutation testing**: every push to main runs a full Stryker sweep, and a
-  score below the repository's floor fails it. The sweeps of main on
-  2026-11-09:
+- **Mutation testing**: each repository runs a full Stryker sweep in GitHub
+  Actions, and a score below the repository's floor fails it. Each tool's
+  README gives the score a recent sweep measured and links the ADR that says
+  how the sweep is run and where its floor stands, and the workflow's runs
+  on main are the sweeps themselves, the newest first.
 
-| Repository | Commit | Mutants | Score | Run |
-| --- | --- | --- | --- | --- |
-| spec-core | `9de6a49` | 5,928 | 96.66% | [42605314127](https://github.com/spec-family/spec-core/actions/runs/42605314127) |
-| spec-brief | `6fb4a3b` | 7,874 | 99.31% | [42616690548](https://github.com/spec-family/spec-brief/actions/runs/42616690548) |
-| spec-graph | `5649582` | 11,408 | 97.24% | [42623168740](https://github.com/spec-family/spec-graph/actions/runs/42623168740) |
-| spec-guard | `e6f38b3` | 15,677 | 99.26% | [42619765580](https://github.com/spec-family/spec-guard/actions/runs/42619765580) |
-| spec-harness | `51ea81b` | 12,601 | 98.00% | [42629434422](https://github.com/spec-family/spec-harness/actions/runs/42629434422) |
+| Repository | The score | The sweeps of main |
+| --- | --- | --- |
+| spec-core | [ADR-0007, *Record*](adr/0007-verification.md#record): spec-core is published nowhere, and its README gives none | [CI](https://github.com/spec-family/spec-core/actions/workflows/ci.yml?query=branch%3Amain), the `mutation` job, on every push |
+| spec-brief | [README, *Design*](https://github.com/spec-family/spec-brief/blob/main/README.md#design) | [Mutation](https://github.com/spec-family/spec-brief/actions/workflows/mutation.yml?query=branch%3Amain), the `full` job, on every push |
+| spec-graph | [README, *Design*](https://github.com/spec-family/spec-graph/blob/main/README.md#design) | [Mutation](https://github.com/spec-family/spec-graph/actions/workflows/mutation.yml?query=branch%3Amain), the `mutation score` job, on every push |
+| spec-guard | [README, *spec-guard checks itself*](https://github.com/spec-family/spec-guard/blob/main/README.md#spec-guard-checks-itself) | [Mutation](https://github.com/spec-family/spec-guard/actions/workflows/mutation.yml?query=branch%3Amain), the `mutation score (full)` job, on every push |
+| spec-harness | [README, *Verified*](https://github.com/spec-family/spec-harness/blob/main/README.md#verified) | [Mutation](https://github.com/spec-family/spec-harness/actions/workflows/mutation.yml?query=branch%3Amain), the `mutation (full)` job, on a push that changes what only the full sweep reads and every Monday; the core sweep of its pure modules runs on every push, in [CI](https://github.com/spec-family/spec-harness/actions/workflows/ci.yml?query=branch%3Amain) |
 
 ## Where next
 
