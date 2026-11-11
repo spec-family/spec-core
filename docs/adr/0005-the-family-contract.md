@@ -540,17 +540,23 @@ tool's CLAUDE.md can point.
   `ignoreStatus`: `true` for every document the tool reads, or an array of
   globs for the documents whose repository-relative path one of them matches,
   each read in the `path` dialect (ADR-0003) and against the whole path, so
-  that one pattern names the same documents in both tools. A document it names
-  is read as one that declares no status: what it writes in front matter, a
-  section, a label or the table is not read for one, and each tool does with
-  it what it does with any document that writes none, which spec-guard keeps
-  in force. Left out, or `false`, the key changes nothing. spec-guard read
-  `ignoreStatus: true` already, the key's form of its `--ignore-status`, to
-  execute the directives of every document not in force; the array names some
-  documents only, and spec-graph reads the same key with the same meaning, so
-  the two tools that read a status agree on whose status they read, as they
-  agree above on where it is written. Each of the two names, in its CHANGELOG,
-  the release that first reads the key in this form.
+  that one pattern names the same documents in both tools. Neither takes a
+  pattern that starts with `!`, or the pattern `.`, in this key; each refuses
+  one, exit `2` with a line that names it. As first written the two tools read
+  each of them two ways - `!` as a negation and as a path that matches
+  nothing, `.` as every Markdown file and as an error - and refusing both
+  keeps every list both accept naming the same documents. A refusal can be
+  lifted later, where a meaning once given could not be taken back. A document
+  it names is read as one that declares no status: what it writes in front
+  matter, a section, a label or the table is not read for one, and each tool
+  does with it what it does with any document that writes none, which
+  spec-guard keeps in force. Left out, or `false`, the key changes nothing.
+  spec-guard read `ignoreStatus: true` already, the key's form of its
+  `--ignore-status`, to execute the directives of every document not in force;
+  the array names some documents only, and spec-graph reads the same key with
+  the same meaning, so the two tools that read a status agree on whose status
+  they read, as they agree above on where it is written. Each of the two
+  names, in its CHANGELOG, the release that first reads the key in this form.
 
   The key is for a document format that writes a status nobody maintains. Spec
   Kit's specification template writes `**Status**: Draft` under the title of
