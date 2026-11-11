@@ -6,7 +6,7 @@ nothing about the first.
 
 | You want to... | Install | Run in CI |
 | --- | --- | --- |
-| keep code honest to its ADRs | `@spec-family/spec-guard` | `spec-guard` |
+| keep code honest to what its Markdown says: specifications, ADRs, READMEs, agent instructions | `@spec-family/spec-guard` | `spec-guard` |
 | keep the documents consistent with each other | `@spec-family/spec-graph` | `spec-graph check` |
 | run rounds of work from briefs, some in parallel | `@spec-family/spec-brief` | `spec-brief lint`, `spec-brief matrix` |
 | let agents run those rounds inside the lines | all of the above and `@spec-family/spec-harness` | the above and `spec-harness premises`, plus `spec-harness init --write` once |
