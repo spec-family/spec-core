@@ -104,6 +104,9 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Documentation
 
+- The overview links `unknown-commit` in its row for orientation documents
+  to spec-graph's page on commits, which names the rule, where it linked the
+  page on orientation documents, which does not.
 - The overview no longer ties spec-guard to ADRs. It holds code to the
   rules any Markdown states - a specification, an ADR, a README, an agent's
   instructions - and the table of documents, the table of problems and the
