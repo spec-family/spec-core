@@ -204,9 +204,13 @@ GitLab - and spec-harness reads the base `.spec-harness.json` names as the
 remote's branch where the checkout has no branch of that name. A job that runs
 on every branch also runs where no round is: on the base, and on a branch
 that names no brief. `--if-round` passes that run, with one line and exit
-`0`, where `audit` alone exits `2` for want of a brief. A branch that names a
-brief is audited as it is without the flag, and one that names a brief
-spec-brief does not list still exits `2`
+`0`, where `audit` alone exits `2` for want of a brief. It passes a round's
+last pull request the same way, whose branch archived the brief it names:
+`spec-brief archive` checked the round when it archived it
+([the tutorial, step 10](tutorial.md#10-archive-and-merge)). A branch that
+names any other brief is audited as it is without the flag, and one that
+names a brief spec-brief does not list, or archived before the branch, still
+exits `2`
 ([spec-harness's reference](https://github.com/spec-family/spec-harness/blob/main/docs/reference/audit.md)).
 `--if-round` needs spec-harness 0.25.0 or later; with an earlier release,
 leave the step out. [`doctor`](#doctor-an-optional-step) has what each

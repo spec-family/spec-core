@@ -107,7 +107,8 @@ copies a module names the spec-core commit in its own changelog.
 - The adopting guide's CI jobs run `spec-harness audit --if-round`, from
   spec-harness 0.25.0, after `premises`, in GitHub's annotations and
   GitLab's Code Quality: the round's report as a whole on a branch that
-  names a brief, and one line and exit `0` on any other, where `audit` alone
+  names a brief, and one line and exit `0` on any other and on a round's
+  last pull request, whose branch archived its brief, where `audit` alone
   exits `2`. Each job fetches the base with its history for it,
   `fetch-depth: 0` on GitHub and `GIT_DEPTH: 0` on GitLab, so `doctor` is
   one more step in the GitHub job rather than a second checkout.
