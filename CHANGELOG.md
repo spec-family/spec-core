@@ -104,6 +104,10 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Documentation
 
+- The overview no longer ties spec-guard to ADRs. It holds code to the
+  rules any Markdown states - a specification, an ADR, a README, an agent's
+  instructions - and the table of documents, the table of problems and the
+  paragraph on installing one tool say so.
 - **An overview of the family, `docs/overview.md`, for a reader who has
   never met it**: the problem first, one sentence for the family, the eight
   kinds of document the tools keep true with the tool and the rule for each,

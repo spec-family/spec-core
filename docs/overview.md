@@ -30,12 +30,12 @@ something, `2` the result cannot be trusted
 | Document | What goes wrong | Tool | Rule or command |
 | --- | --- | --- | --- |
 | ADR | The code stops keeping a rule the ADR states; a rule is written so that it can never fail; a code comment cites a decision that was superseded or never written; a superseded ADR still reads as current | spec-guard, spec-graph | `@assert-*` directives under the sentence, run by `spec-guard`; [`spec-guard prove`](https://github.com/spec-family/spec-guard/blob/main/docs/reference/prove.md); [`spec-guard cites`](https://github.com/spec-family/spec-guard/blob/main/docs/reference/cites.md); [`live-supersession`](https://github.com/spec-family/spec-graph/blob/main/docs/reference/rules.md) |
-| Specification | A citation names a document or anchor that is not there; a document rests on a decision since retired; open work is handed to a document that can no longer take it; a claim says `Implemented` and no test stands behind it | spec-graph, spec-guard | [`broken-reference`, `stale-premise`, `ghost-handover`](https://github.com/spec-family/spec-graph/blob/main/docs/reference/rules.md); [`spec-guard claims`](https://github.com/spec-family/spec-guard/blob/main/docs/reference/claims.md) |
+| Specification | The code stops keeping a rule the specification states; a citation names a document or anchor that is not there; a document rests on a decision since retired; open work is handed to a document that can no longer take it; a claim says `Implemented` and no test stands behind it | spec-graph, spec-guard | [`broken-reference`, `stale-premise`, `ghost-handover`](https://github.com/spec-family/spec-graph/blob/main/docs/reference/rules.md); [`@assert-*` directives](https://github.com/spec-family/spec-guard/blob/main/docs/reference/directives.md) under the sentence; [`spec-guard claims`](https://github.com/spec-family/spec-guard/blob/main/docs/reference/claims.md) |
 | Checklist or roadmap | A box is ticked with nothing behind it, cites a claim still open, or names a commit git does not have | spec-graph | [`unevidenced-completion`, `premature-completion`, `unknown-commit`](https://github.com/spec-family/spec-graph/blob/main/docs/reference/claims-and-evidence.md#checklists-and-ledgers-held-to-what-they-cite) |
 | Ledger or status page | A row says done while the claim it cites still leaves work open | spec-graph | [`premature-completion`, `unknown-commit`](https://github.com/spec-family/spec-graph/blob/main/docs/reference/claims-and-evidence.md#checklists-and-ledgers-held-to-what-they-cite) |
 | Register | A row's status is a word the register does not know; a row lacks the resolution, citation or commit its status asks for; two rows share a key | spec-graph | [`unknown-register-status`, `incomplete-register-row`, `duplicate-key`](https://github.com/spec-family/spec-graph/blob/main/docs/reference/registers.md) |
 | Measurement protocol, and the figures that rest on it | A protocol has no method or no dated result; a claim that asks for a measurement cites no protocol; a figure names no record | spec-graph | [`incomplete-protocol`, `undated-result`, `target-without-protocol`, `unrecorded-figure`](https://github.com/spec-family/spec-graph/blob/main/docs/reference/claims-and-evidence.md#figures-resting-on-a-record) |
-| Orientation document: `CLAUDE.md`, `AGENTS.md`, a README | It names a path, a script, a make target or a commit that is not there | spec-graph | [`missing-path`, `missing-command`, `unknown-commit`](https://github.com/spec-family/spec-graph/blob/main/docs/reference/orientation.md) |
+| Orientation document: `CLAUDE.md`, `AGENTS.md`, a README | It names a path, a script, a make target or a commit that is not there; the code stops keeping a rule it states | spec-graph, spec-guard | [`missing-path`, `missing-command`, `unknown-commit`](https://github.com/spec-family/spec-graph/blob/main/docs/reference/orientation.md); [`@assert-*` directives](https://github.com/spec-family/spec-guard/blob/main/docs/reference/directives.md) under the sentence |
 | Brief | Its contract is incomplete; two rounds meant to run side by side could write the same file; an agent writes a file the brief protects; the round closes with a protected file changed, a box open, or a claim it raises still open | spec-brief, spec-harness | [`spec-brief lint`, `matrix`, `schedule`, `archive`](https://github.com/spec-family/spec-brief/blob/main/docs/reference/commands.md); [`spec-harness guard`, `audit`](https://github.com/spec-family/spec-harness/blob/main/docs/reference/README.md) |
 
 spec-graph reads specifications, ADRs and the references between them with no
@@ -52,8 +52,8 @@ label, ledger, register, protocol, orientation document - are defined in
 
 | The problem | Tool | What runs |
 | --- | --- | --- |
-| The code no longer keeps a rule an ADR states | spec-guard | `spec-guard` in CI |
-| A rule in an ADR could never fail | spec-guard | `spec-guard prove` |
+| The code no longer keeps a rule a specification, an ADR, a README or an agent's instructions state | spec-guard | `spec-guard` in CI |
+| A rule a document states could never fail | spec-guard | `spec-guard prove` |
 | A specification says `Implemented`, and no test that could fail stands behind it | spec-guard | `spec-guard claims` |
 | A code comment cites a decision that was superseded | spec-guard | `spec-guard cites` |
 | A document rests on a decision that was retired, or hands its open work to one | spec-graph | `spec-graph check` |
@@ -67,10 +67,11 @@ label, ledger, register, protocol, orientation document - are defined in
 | An agent starts a round without the documents its brief cites | spec-harness | `spec-harness context`, or the MCP tool `start_round` |
 | A defect brief whose defect may already be gone | spec-harness | `spec-harness probe`, `spec-harness premises` |
 
-One tool is a useful install on its own: spec-guard alone holds code to its
-ADRs, spec-graph alone holds documents to each other and to the record they
-cite. [Adopting](adopting.md) goes from one tool to the whole loop, and the
-[tutorial](tutorial.md) runs one round from the brief to the archive.
+One tool is a useful install on its own: spec-guard alone holds code to what
+its Markdown says, spec-graph alone holds documents to each other and to the
+record they cite. [Adopting](adopting.md) goes from one tool to the whole
+loop, and the [tutorial](tutorial.md) runs one round from the brief to the
+archive.
 
 ## Neighbours
 
@@ -108,16 +109,16 @@ feature's open work, and an archived OpenSpec change as a record
 Markdown with YAML front matter in `.archgate/adrs/`, each with an optional
 companion `.rules.ts` file of checks that `archgate check` runs in CI and in
 pre-commit hooks; a rule is TypeScript and can read files, search them and
-parse them into syntax trees
-([writing rules](https://cli.archgate.dev/guides/writing-rules/)). Its agent
-plugins need a one-time `archgate login`; the command line needs no account
+parse them into syntax trees ([writing
+rules](https://cli.archgate.dev/guides/writing-rules/)). Its agent plugins
+need a one-time `archgate login`; the command line needs no account
 ([README](https://github.com/archgate/cli/blob/main/README.md)). Its ADR
-front matter has no status and no supersession field
-([ADR schema](https://cli.archgate.dev/reference/adr-schema/)). A spec-guard
-rule is an HTML comment under the sentence it enforces, in the ADR itself,
-and is held only while the ADR is in force; spec-graph holds the ADRs'
-lifecycle. Archgate's rules, being code, can express checks a spec-guard
-directive cannot.
+front matter has no status and no supersession field ([ADR
+schema](https://cli.archgate.dev/reference/adr-schema/)). A spec-guard rule
+is an HTML comment under the sentence it enforces, in the ADR itself as in
+any other Markdown, and is held only while the ADR is in force; spec-graph
+holds the ADRs' lifecycle. Archgate's rules, being code, can express checks a
+spec-guard directive cannot.
 
 [Mneme](https://github.com/MnemeHQ/mneme) (MIT, Python 3.11 or later) keeps a
 corpus of engineering decisions and enforces the rules they govern
