@@ -109,8 +109,15 @@ jobs:
       # a job that lost that step stops here, where npx alone would fetch
       # whatever the registry has under the name. `.npmrc` says the same for
       # every command (tests/npm.test.ts).
+      # EXPERIMENT (round 28, throwaway): the order's record shared by the
+      # shard's workers through one file, as vitest 4's cache was, and each
+      # run logged (vitest.mutation.config.ts).
       - name: Mutation sweep, one shard
+        env:
+          ORDER_RECORD_FILE: ${{ runner.temp }}/order-record.json
+          ORDER_LOG_DIR: ${{ runner.temp }}/order-log
         run: |
+          mkdir -p "$ORDER_LOG_DIR"
           started=$SECONDS
           npx --no-install stryker run stryker.shard.config.mjs
           echo "{\"seconds\": $((SECONDS - started))}" > "reports/mutation/shard-$MUTATION_SHARD.timing.json"
@@ -118,6 +125,13 @@ jobs:
         with:
           name: mutation-shard-${{ matrix.shard }}
           path: reports/mutation/shard-${{ matrix.shard }}*.json
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: order-log-${{ matrix.shard }}
+          path: ${{ runner.temp }}/order-log/
           if-no-files-found: error
           retention-days: 14
 

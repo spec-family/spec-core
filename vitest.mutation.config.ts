@@ -1,4 +1,4 @@
-import { statSync } from 'node:fs';
+import { appendFileSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 
 import { defineConfig } from 'vitest/config';
 import { BaseSequencer, type Reporter, type TestModule, type TestSpecification } from 'vitest/node';
@@ -27,13 +27,75 @@ import { BaseSequencer, type Reporter, type TestModule, type TestSpecification }
  */
 const failedLast = new Map<string, boolean>();
 
+/*
+ * EXPERIMENT (round 28, a throwaway branch; never merged). Vitest 4's cache
+ * file was read once when a process started and rewritten whole after each
+ * run, by every worker, so a worker Stryker started after a timeout began
+ * with what the last writer held. With ORDER_RECORD_FILE set, the record
+ * above does the same: read once at the start of this process, written
+ * whole after each run. With ORDER_LOG_DIR set, each run is logged, with the
+ * order main's record would have given (ownOnly: this process's own runs,
+ * never read from the file), so the log holds both orders of a static
+ * mutant's run.
+ */
+const SHARED = process.env['ORDER_RECORD_FILE'];
+const LOG_DIR = process.env['ORDER_LOG_DIR'];
+const ownOnly = new Map<string, boolean>();
+const started = Date.now();
+let loaded = -1;
+if (SHARED !== undefined) {
+  try {
+    const shared = JSON.parse(readFileSync(SHARED, 'utf8')) as Record<string, boolean>;
+    for (const [id, failed] of Object.entries(shared)) failedLast.set(id, failed);
+    loaded = [...failedLast.values()].filter(Boolean).length;
+  } catch {
+    loaded = -1;
+  }
+}
+const short = (id: string): string => id.slice(id.lastIndexOf('/tests/') + 1);
+let runs = 0;
+let tests = 0;
+let sorted: { n: number; failed: number; ownFailed: number; shared?: string[]; own?: string[] } | null = null;
+const log = (entry: object): void => {
+  if (LOG_DIR !== undefined) appendFileSync(`${LOG_DIR}/${process.pid}.jsonl`, `${JSON.stringify(entry)}\n`);
+};
+
 /** The reporter that keeps the record above, named in the suite below. */
 export const lastRun = {
   // No `onInit`: vitest 5 calls it at the start of every run, which would
   // empty the record before each sort (ADR-0007, 2026-11-09).
   onTestModuleEnd(module: TestModule): void {
     const state = module.state();
-    if (state === 'passed' || state === 'failed') failedLast.set(module.moduleId, state === 'failed');
+    if (state === 'passed' || state === 'failed') {
+      failedLast.set(module.moduleId, state === 'failed');
+      ownOnly.set(module.moduleId, state === 'failed');
+    }
+  },
+  onTestCaseResult(testCase): void {
+    const state = testCase.result().state;
+    if (state === 'passed' || state === 'failed') tests += 1;
+  },
+  onTestRunEnd(testModules): void {
+    if (SHARED !== undefined) {
+      const temporary = `${SHARED}.${process.pid}`;
+      writeFileSync(temporary, JSON.stringify(Object.fromEntries(failedLast)));
+      renameSync(temporary, SHARED);
+    }
+    const killer = testModules.find((module) => module.state() === 'failed');
+    const whole = killer === undefined && testModules.length >= 30;
+    log({
+      pid: process.pid,
+      run: runs,
+      t: Date.now() - started,
+      ...(runs === 0 ? { loaded } : {}),
+      ...sorted,
+      tests,
+      killer: killer === undefined ? null : short(killer.moduleId),
+      ...(whole ? { counts: Object.fromEntries(testModules.map((module) => [short(module.moduleId), [...module.children.allTests()].length])) } : {}),
+    });
+    runs += 1;
+    tests = 0;
+    sorted = null;
   },
 } satisfies Reporter;
 
@@ -74,15 +136,26 @@ export const lastRun = {
 export class QuickestFirst extends BaseSequencer {
   override async sort(files: TestSpecification[]): Promise<TestSpecification[]> {
     const { cache } = this.ctx;
-    const rank = (file: TestSpecification): [number, number] => {
+    const rankBy = (record: Map<string, boolean>) => (file: TestSpecification): [number, number] => {
       // What vitest's own sequencer asks its cache; a test holds the two
       // together. Its `failed` is not read: that is the record's.
       const last = cache.getTestSpecificationResult(file);
       if (last === undefined) return [2, -(statSync(file.moduleId, { throwIfNoEntry: false })?.size ?? 0)];
-      return [failedLast.get(file.moduleId) === true ? 0 : 1, last.duration];
+      return [record.get(file.moduleId) === true ? 0 : 1, last.duration];
     };
-    const ranked = files.map((file) => ({ file, rank: rank(file) }));
-    return ranked.sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1]).map(({ file }) => file);
+    const order = (record: Map<string, boolean>): TestSpecification[] => {
+      const rank = rankBy(record);
+      const ranked = files.map((file) => ({ file, rank: rank(file) }));
+      return ranked.sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1]).map(({ file }) => file);
+    };
+    const result = order(failedLast);
+    if (LOG_DIR !== undefined) {
+      const failed = files.filter((file) => failedLast.get(file.moduleId) === true).length;
+      const ownFailed = files.filter((file) => ownOnly.get(file.moduleId) === true).length;
+      sorted = { n: files.length, failed, ownFailed };
+      if (files.length >= 30) sorted = { ...sorted, shared: result.map((file) => short(file.moduleId)), own: order(ownOnly).map((file) => short(file.moduleId)) };
+    }
+    return result;
   }
 }
 
