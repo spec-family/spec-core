@@ -104,6 +104,15 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Documentation
 
+- ADR-0005 adds `ignoreStatus` to where a status is read: spec-guard and
+  spec-graph each take the key, `true` for every document or an array of
+  `path`-dialect globs for some, and read a document it names as one that
+  declares no status. Both refuse a pattern that starts with `!`, and `.`,
+  in the key, which the two had read two ways each. It is for a format that writes a status nobody
+  maintains, as Spec Kit writes `**Status**: Draft` into every specification
+  and never changes it, which spec-guard read as a draft whose directives do
+  not run and whose `Implemented` requirements have no evidence. Left out,
+  every status is read as before.
 - The overview links `unknown-commit` in its row for orientation documents
   to spec-graph's page on commits, which names the rule, where it linked the
   page on orientation documents, which does not.
