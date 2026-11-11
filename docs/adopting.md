@@ -9,7 +9,7 @@ nothing about the first.
 | keep code honest to what its Markdown says: specifications, ADRs, READMEs, agent instructions | `@spec-family/spec-guard` | `spec-guard` |
 | keep the documents consistent with each other | `@spec-family/spec-graph` | `spec-graph check` |
 | run rounds of work from briefs, some in parallel | `@spec-family/spec-brief` | `spec-brief lint`, `spec-brief matrix` |
-| let agents run those rounds inside the lines | all of the above and `@spec-family/spec-harness` | the above and `spec-harness premises`, plus `spec-harness init --write` once |
+| let agents run those rounds inside the lines | all of the above and `@spec-family/spec-harness` | the above, `spec-harness premises` and `spec-harness audit --if-round`, plus `spec-harness init --write` once |
 
 The [overview](overview.md#which-problem-which-tool) goes from the problem
 you have to the tool and the rule that answers it, document by document.
@@ -175,7 +175,7 @@ Each tool writes its findings in the forge's own format:
 | `spec-guard` | `--format github` | `--format gitlab` |
 | `spec-graph check` | `--format github` | `--format gitlab` |
 | `spec-brief lint`, `spec-brief matrix` | `--format github` | `--format gitlab` |
-| `spec-harness premises` | `--format github` | `--format gitlab` |
+| `spec-harness premises`, `spec-harness audit` | `--format github` | `--format gitlab` |
 
 `--format github` writes workflow commands, which GitHub turns into
 annotations on the pull request from the job's log, with no upload step.
@@ -195,6 +195,23 @@ and need spec-harness 0.7.0 or later: with 0.6, a round's own merge request
 reports the premise it set out to retire as stale. spec-graph's
 `--format github` needs spec-graph 0.10.0 or later.
 
+`spec-harness audit` reports on the round as a whole: what spec-brief's
+archive would refuse, the brief's goals and premises run through spec-guard,
+the rulings whose signatures do not verify, and the dependencies and install
+scripts the round added. It measures them from the base, so its job fetches
+the base with its history - `fetch-depth: 0` on GitHub, `GIT_DEPTH: 0` on
+GitLab - and spec-harness reads the base `.spec-harness.json` names as the
+remote's branch where the checkout has no branch of that name. A job that runs
+on every branch also runs where no round is: on the base, and on a branch
+that names no brief. `--if-round` passes that run, with one line and exit
+`0`, where `audit` alone exits `2` for want of a brief. A branch that names a
+brief is audited as it is without the flag, and one that names a brief
+spec-brief does not list still exits `2`
+([spec-harness's reference](https://github.com/spec-family/spec-harness/blob/main/docs/reference/audit.md)).
+`--if-round` needs spec-harness 0.25.0 or later; with an earlier release,
+leave the step out. [`doctor`](#doctor-an-optional-step) has what each
+forge's checkout fetches.
+
 ### GitHub Actions
 
 ```yaml
@@ -213,6 +230,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0 # the base and its history, which audit measures from
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '26'
@@ -227,6 +245,8 @@ jobs:
         run: npx --no-install @spec-family/spec-brief matrix --format github
       - if: ${{ !cancelled() }}
         run: npx --no-install @spec-family/spec-harness premises --format github
+      - if: ${{ !cancelled() }}
+        run: npx --no-install @spec-family/spec-harness audit --if-round --format github
 ```
 
 - The actions are pinned to commits, with the version beside each, because a
@@ -266,6 +286,8 @@ spec:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    GIT_DEPTH: 0 # the base and its history, which audit measures from
   script:
     - npm ci
     # The job stops at the first command that fails, so every tool runs once,
@@ -276,6 +298,7 @@ spec:
     - npx --no-install @spec-family/spec-brief lint --format gitlab > gl-spec-brief-lint.json || worst=$(( $? > worst ? $? : worst ))
     - npx --no-install @spec-family/spec-brief matrix --format gitlab > gl-spec-brief-matrix.json || worst=$(( $? > worst ? $? : worst ))
     - npx --no-install @spec-family/spec-harness premises --format gitlab > gl-spec-harness-premises.json || worst=$(( $? > worst ? $? : worst ))
+    - npx --no-install @spec-family/spec-harness audit --if-round --format gitlab > gl-spec-harness-audit.json || worst=$(( $? > worst ? $? : worst ))
     - exit $worst
   artifacts:
     when: always
@@ -286,6 +309,7 @@ spec:
         - gl-spec-brief-lint.json
         - gl-spec-brief-matrix.json
         - gl-spec-harness-premises.json
+        - gl-spec-harness-audit.json
 ```
 
 - `node:26` is the Active LTS image, and the full one: spec-brief and
@@ -348,14 +372,10 @@ request it checks out on no branch
 checkout's log in a release job of spec-harness's (its run of 2026-10-19)
 names the branches as fetched by `+refs/heads/*:refs/remotes/origin/*`, and
 spec-harness 0.24.0 reads the base there, `base    remotes/origin/main` in
-`doctor`'s report:
+`doctor`'s report. The job above checks out that way for `audit`, and
+`doctor` is one more step in it:
 
 ```yaml
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      # ...the steps above, then:
       - if: ${{ !cancelled() }}
         run: npx --no-install @spec-family/spec-harness doctor
 ```
