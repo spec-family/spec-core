@@ -534,6 +534,39 @@ tool's CLAUDE.md can point.
   release that first reads it. *Amended again 2026-09-30*: the keys are
   `Status` and `State` only; `狀態` and `状态` are withdrawn with the Chinese
   status words, below the lifecycle table.
+
+  *Amended 2026-11-11*: **a repository can say which documents' status is not
+  read.** spec-guard and spec-graph each take the configuration key
+  `ignoreStatus`: `true` for every document the tool reads, or an array of
+  globs for the documents whose repository-relative path one of them matches,
+  each read in the `path` dialect (ADR-0003) and against the whole path, so
+  that one pattern names the same documents in both tools. A document it names
+  is read as one that declares no status: what it writes in front matter, a
+  section, a label or the table is not read for one, and each tool does with
+  it what it does with any document that writes none, which spec-guard keeps
+  in force. Left out, or `false`, the key changes nothing. spec-guard read
+  `ignoreStatus: true` already, the key's form of its `--ignore-status`, to
+  execute the directives of every document not in force; the array names some
+  documents only, and spec-graph reads the same key with the same meaning, so
+  the two tools that read a status agree on whose status they read, as they
+  agree above on where it is written. Each of the two names, in its CHANGELOG,
+  the release that first reads the key in this form.
+
+  The key is for a document format that writes a status nobody maintains. Spec
+  Kit's specification template writes `**Status**: Draft` under the title of
+  every specification its `specify` command makes, and none of its nine
+  commands' templates mentions that line again
+  ([templates/spec-template.md](https://github.com/github/spec-kit/blob/v1.4.0/templates/spec-template.md)
+  and `templates/commands/`, at v1.4.0, read 2026-11-11). So every such
+  specification reads as a draft for as long as it exists: spec-guard executes
+  none of the directives written in it, and `spec-guard claims` takes none of
+  them as a claim's evidence, which must stand in a document in force, so each
+  `Implemented` requirement under one is `unevidenced-claim`. Reading `Draft`
+  there as anything else would be a guess at what a team meant, and no longer
+  reading the label would leave unread every team that does keep one up to
+  date. The repository that knows its format writes a word nobody changes says
+  so, for the paths where it does, and the default reads every status as
+  before.
 - State that exists only while work is in flight - an escalation waiting for a
   person, a sandbox in use - lives **outside the working tree**, under the git
   common directory (`.git/spec-harness/`), and only its outcome is written back
