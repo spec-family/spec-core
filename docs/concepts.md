@@ -105,8 +105,9 @@ prose the agent reads
 ### Assertion
 
 An HTML comment such as `<!-- @assert-absence target="src/" symbol="LegacyGateway" -->`
-under the sentence it makes executable. spec-guard runs it against the code:
-in an ADR it is a rule the code keeps, in a brief it is a [goal](#goal) or a
+under the sentence it makes executable, in any Markdown. spec-guard runs it
+against the code: in a specification, an ADR, a README or an agent's
+instructions it is a rule the code keeps, in a brief it is a [goal](#goal) or a
 [premise](#premise). `spec-guard prove` shows each rule a violation of itself,
 so a rule that cannot fail is found
 ([spec-guard](https://github.com/spec-family/spec-guard#directives),
