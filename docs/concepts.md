@@ -100,6 +100,44 @@ in `.spec-harness.json`, not the brief's *Negative Scope* section, which is
 prose the agent reads
 ([spec-harness](https://github.com/spec-family/spec-harness/blob/main/docs/reference/configuration.md#configuration)).
 
+## Findings
+
+### Finding
+
+What a check reports: one defect, with the rule that found it, a
+[severity](#severity), a place (a file, a line, a column where there is one),
+a message and a [hint](#hint). Every format a tool writes carries the same
+findings - the text report, JSON, SARIF, GitHub's annotations and GitLab's
+Code Quality - and one defect is one finding
+([ADR-0005](adr/0005-the-family-contract.md#findings-and-output)).
+
+### Severity
+
+How much a finding weighs: an error fails the run, a warning and a note do
+not, unless `--strict` raises warnings to errors. The family's words are
+`error`, `warning` and `note`, which are SARIF's. spec-brief and
+spec-harness write those; spec-graph writes `warn` and `info`, and its
+configuration's `severities` takes them. Each tool's next release reads
+`warn` as `warning` and `info` as `note` wherever it reads a severity, and
+round 30 has spec-graph write the family's words
+([ADR-0005](adr/0005-the-family-contract.md#findings-and-output)).
+
+### Hint
+
+The part of a finding that names the next action: the edit, the option or
+the command that resolves it. A message says what is wrong; the hint says
+what to do, and every format writes it after the message.
+
+### Exit codes
+
+The same three in every tool: `0` the run was clean, `1` it found
+something or refused an action, `2` its answer cannot be trusted - a
+configuration that did not load, an option that names nothing, a question
+it could not decide, an error it did not expect. A pipeline treats `2` as a
+failure, never as a pass, and may let `1` through while a tool is adopted
+([ADR-0005](adr/0005-the-family-contract.md#runs),
+[adopting](adopting.md#ci)).
+
 ## Checks
 
 ### Assertion
@@ -204,6 +242,47 @@ them
 ([spec-graph](https://github.com/spec-family/spec-graph/blob/main/docs/reference/lifecycle.md),
 [spec-guard](https://github.com/spec-family/spec-guard/blob/main/docs/reference/document-status.md),
 [ADR-0005](adr/0005-the-family-contract.md#documents-and-state)).
+
+### ignoreStatus
+
+A configuration key spec-guard and spec-graph both read: `true`, or globs
+naming documents whose status is not read, so each is read as a document
+that declares none - in force, to spec-guard. It is for a format that
+writes a status nobody maintains, as Spec Kit writes `**Status**: Draft`
+into every specification and never changes it
+([ADR-0005](adr/0005-the-family-contract.md#documents-and-state),
+[adopting](adopting.md#spec-kit-and-openspec)).
+
+### Identifier family
+
+The prefix a document's identifier is written with, `ADR` for `ADR-0007`,
+`RFC` for `RFC-0012`. spec-graph reads a bare `ADR-0007` in prose as a
+citation only where documents of that family exist, and spec-guard's `cites`
+reads the families its configuration names. Not the spec family, the tools
+these pages describe
+([spec-graph](https://github.com/spec-family/spec-graph/blob/main/docs/reference/configuration.md#family-rules)).
+
+### Citation
+
+A document's identifier written where it is relied on. In a document,
+spec-graph reads `ADR-0007` in prose, a link or a front-matter field as one
+reference to that document. In code, spec-guard's `cites` reads a comment
+such as `// ADR-0011: the domain imports no infrastructure` and reports a
+**ghost**, a citation of a document that does not exist, as an error, and a
+**stale** one, of a document no longer in force, as a warning, or an error
+under `--strict`
+([spec-guard](https://github.com/spec-family/spec-guard/blob/main/docs/reference/cites.md),
+[spec-graph](https://github.com/spec-family/spec-graph/blob/main/docs/reference/references.md)).
+
+### Selector and project rule
+
+spec-graph's rules are selectors in its query language, such as
+`document[phase=active] -depends-on-> document[phase=draft]`, and
+`spec-graph query` finds whatever one names. A selector with a message,
+under `rules` in its configuration, is a **project rule**: a check of the
+repository's own, reported as a finding like any other. It is the third way
+to extend the family, beside the [two kinds of plugin](#two-kinds-of-plugin)
+([spec-graph](https://github.com/spec-family/spec-graph/blob/main/docs/reference/query-language.md)).
 
 ### Record
 
@@ -409,10 +488,20 @@ decision
 
 ### Dispositions
 
-The words that close a task box without ticking it: a note under the box that
-starts with `**Delegated`, `**Accepted debt` or `**Rejected`
-(`archiving.dispositions`), saying where the work went or why it was not done
-([spec-brief](https://github.com/spec-family/spec-brief/blob/main/docs/reference/commands.md#spec-brief-archive-brief)).
+Two tools use the word for two things:
+
+- **In spec-brief**, the words that close a task box without ticking it: a
+  note under the box that starts with `**Delegated`, `**Accepted debt` or
+  `**Rejected` (`archiving.dispositions`), saying where the work went or why
+  it was not done
+  ([spec-brief](https://github.com/spec-family/spec-brief/blob/main/docs/reference/commands.md#spec-brief-archive-brief)).
+- **In spec-graph**, what happened to an [obligation](#obligation), one of
+  seven values read from its checkbox, a marker, strikethrough or its
+  section, from which whether work remains follows
+  ([spec-graph](https://github.com/spec-family/spec-graph/blob/main/docs/reference/obligations.md)).
+
+The rule id `stale-premise` is two checks the same way, spec-harness's and
+spec-graph's ([premise](#premise)).
 
 ## The agent's side
 
