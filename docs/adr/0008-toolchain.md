@@ -563,3 +563,23 @@ new and gone, each read; and the static mutants' tests before their kills,
 the third number the command of the amendment of 2026-11-09 prints, which
 should fall. The tool's mutation ADR records the three, and the slowest
 shard.
+
+## Amended 2026-11-13: a pull request runs no macOS leg
+
+**Context.** Since the pull request's four legs became the check a ruleset
+requires (`all green`), a leg GitHub cannot start fails it. On 2026-11-12 the
+hosted `macos-26` runners were not acquired "even after multiple attempts"
+for spec-guard#116 twice, for spec-guard's main at ec66f6e, and earlier for a
+release of spec-graph and a push to spec-harness's main: each a failure that
+said nothing of the code, and each blocked a merge until a rerun found a
+runner.
+
+**Decision.** A pull request runs three legs: Node 22 and 26 on
+`ubuntu-24.04` and Node 22 on Windows. macOS runs on main, on a manual run
+and in a release, as every other leg does, so a version is still staged only
+after macOS has passed.
+
+**Consequences.** A break on macOS alone is found on main, where a rerun
+answers a runner that was not acquired, and not on the pull request. When
+GitHub supplies `macos-26` runners as it does the others, the leg can come
+back to pull requests by this amendment's edit.
