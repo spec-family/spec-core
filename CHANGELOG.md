@@ -7,6 +7,22 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Added
 
+- **`githubAnchor` on every heading, and `githubSlug` in `markdown`: the
+  anchor GitHub gives a heading**, beside `slug` and `anchor`, which stay
+  spec-graph's and keep its item ids where they are. GitHub keeps `_`
+  (`#snake_case_name`, `#why-remove-restricted_std`), drops a tab and a
+  no-break space, and slugs the text as rendered: a link's text without its
+  address, nothing of an image, a tag's content without the tag, a
+  character reference decoded, and emphasis made of `_` without its
+  underscores (`__init__` is `init`, `snake_case` keeps them). `null` where
+  that depends on more than the heading: a named character reference
+  outside the ISO 8859-1 names and a few others, and a full reference link
+  `[text][label]`. Measured against GitHub's Markdown API on 2026-11-12, 183
+  headings and 136 lines of inline Markdown, all alike but those `null`s
+  and a bare URL GitHub links by itself (ADR-0004, amended 2026-11-12).
+  Nothing a tool reads changes until it reads the field; spec-graph is to
+  resolve an anchor against it beside the two it reads.
+
 - **`findClaims` in `markdown`: the list items that open with a label of a
   vocabulary the caller names**, `` - `Implemented`: ``, each with its label,
   every label its own text writes, and the item, whose range holds what is

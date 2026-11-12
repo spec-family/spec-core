@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { scanMarkdown, sectionsOf, slugify, titleOf } from '../../src/markdown/index.js';
+import { githubSlug, scanMarkdown, sectionsOf, slugify, titleOf } from '../../src/markdown/index.js';
+import { EDGES, LINKS_AND_EMPHASIS, UNDERSCORES_AND_SCRIPTS, type AnchoredDocument } from './github-anchors.js';
 
 const doc = (...lines: string[]): string => lines.join('\n');
 const headings = (text: string): [string, number, string][] =>
@@ -46,6 +47,7 @@ describe('ATX headings', () => {
         text: 'Title',
         slug: 'title',
         anchor: 'title',
+        githubAnchor: 'title',
         start: 4,
         end: 16,
         textStart: 8,
@@ -143,6 +145,55 @@ describe('slugs and anchors', () => {
     expect(anchors(doc('# foo', '# foo', '# foo-1'))).toEqual(['foo', 'foo-1', 'foo-1-1']);
     expect(anchors(doc('# foo-1', '# foo', '# foo'))).toEqual(['foo-1', 'foo', 'foo-2']);
     expect(anchors(doc('#', '#', 'Setext', '---', '# Setext'))).toEqual(['', '-1', 'setext', 'setext-1']);
+  });
+});
+
+describe('GitHub anchors', () => {
+  /**
+   * The headings whose anchor is not GitHub's, and why. Each of the others
+   * has the anchor GitHub gave it, in the document it was measured in.
+   */
+  const OTHERWISE: ReadonlyMap<string, string | null> = new Map([
+    // A full reference link is a link or literal text by a definition elsewhere.
+    ['[ref link][r]', null],
+    ['[defined][d]', null],
+    // A name outside the few known is a character or literal text by HTML's table.
+    ['&nosuch; entity', null],
+    // GitHub links a bare URL by itself and keeps the underscores in it, which
+    // are read here as emphasis.
+    ['https://x.y/_a_ bare', 'httpsxya-bare'],
+    ['www.x.y/_a_ bare', 'wwwxya-bare'],
+  ]);
+
+  it.each<[string, AnchoredDocument]>([
+    ['underscores and scripts', UNDERSCORES_AND_SCRIPTS],
+    ['links and emphasis', LINKS_AND_EMPHASIS],
+    ['edges', EDGES],
+  ])('gives each heading of the document of %s the anchor GitHub gave it', (_, measured) => {
+    const text = measured.headings.map(([heading]) => `## ${heading}\n`).join('\n') + (measured.tail === '' ? '' : `\n${measured.tail}`);
+    const scanned = scanMarkdown(text).headings;
+    expect(scanned.map((h) => h.text)).toEqual(measured.headings.map(([heading]) => heading));
+    expect(scanned.map((h) => h.githubAnchor)).toEqual(measured.headings.map(([heading, anchor]) => (OTHERWISE.has(heading) ? OTHERWISE.get(heading) : anchor)));
+  });
+
+  it('keeps the slug and the anchor item ids are made of as they were', () => {
+    const [heading] = scanMarkdown('## Why remove restricted_std\n').headings;
+    expect([heading?.slug, heading?.anchor, heading?.githubAnchor]).toEqual(['why-remove-restrictedstd', 'why-remove-restrictedstd', 'why-remove-restricted_std']);
+  });
+
+  it('lowers each character on its own, so a final sigma is not made', () => {
+    expect(githubSlug('ΣΑΣ')).toBe('σασ');
+    expect(slugify('ΣΑΣ')).toBe('σας');
+  });
+
+  it('keeps letters, marks, decimal digits and connector punctuation, and makes each space a hyphen', () => {
+    expect(githubSlug('a\u0301 \u0663 \u2167 \u203f \u00b2 \u00bd \u2011 \t\u00a0x')).toBe('a\u0301-\u0663-\u2177-\u203f----x');
+  });
+
+  it('counts the repeats among the headings whose GitHub slug is known, and gives none to the others', () => {
+    const anchors = (text: string): (string | null)[] => scanMarkdown(text).headings.map((h) => h.githubAnchor);
+    expect(anchors(doc('# a_b', '# &ab; a_b', '# a_b', '# [a_b][x]', '# a_b'))).toEqual(['a_b', null, 'a_b-1', null, 'a_b-2']);
+    expect(githubSlug('&ab;')).toBeNull();
   });
 });
 

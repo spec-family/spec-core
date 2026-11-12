@@ -29,7 +29,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { findClaims, findCommitReferences, findItemIds, findRegisterRows, scanMarkdown, sectionsOf, type MarkdownScan } from '../../src/markdown/index.js';
+import { findClaims, findCommitReferences, findItemIds, findRegisterRows, githubSlug, scanMarkdown, sectionsOf, type MarkdownScan } from '../../src/markdown/index.js';
 import { fastestInTurn } from '../timing.js';
 
 /** A scan with every part it makes when first asked for already made. */
@@ -225,6 +225,25 @@ describe('linear time on hostile input', () => {
     const small = scanMarkdown(`# top\n${'## same\n'.repeat(2500)}`);
     const large = scanMarkdown(`# top\n${'## same\n'.repeat(2500 * 16)}`);
     expect(expectSameWork(small, large, sectionsOf).at(-1)?.heading.anchor).toBe('same-39999');
+  });
+
+  it("a heading's GitHub slug, where emphasis, brackets, code spans and tags never close", () => {
+    // Openers of one character before closers of the other each send a
+    // naive search back over every opener; a bracket, a code span and a
+    // quoted value each look ahead for a closer that is not there.
+    const make = (scale: number): string => {
+      const parts = [
+        '_a '.repeat(2_000 * scale),
+        'b* '.repeat(2_000 * scale),
+        '[x '.repeat(2_000 * scale),
+        '] '.repeat(2_000 * scale),
+        '<a b="c '.repeat(500 * scale),
+        '`z` '.repeat(2_000 * scale),
+      ];
+      for (let k = 1; k <= 120 * Math.sqrt(scale); k += 1) parts.push(`${'`'.repeat(k)} y `);
+      return parts.join('');
+    };
+    expect(expectSameWork(make(1), make(16), githubSlug)).toMatch(/^_a-_a-/u);
   });
 
   it('front matter that never closes', () => {
