@@ -75,6 +75,12 @@ verdict in the memory of the process that drives the worker, where the
 sequencer reads it. The times stay the cache's, each whole file's: a record
 of each run's time as well was swept and read no better. The record below
 has the measurements.
+*Amended 2026-11-12*: the workers of one sweep share that record through a
+file in Stryker's sandbox, as they shared vitest 4's cache: a worker reads
+it once, when it starts, and writes its own whole after each run, so a
+worker Stryker starts in place of one that timed out begins with what the
+last writer held, where it had begun with nothing. The record below has the
+measurements.
 
 **Thresholds are measurements, never targets.** The first full sweep sets the
 `break` a little under what it measured; it moves up with the measurement and
@@ -1260,3 +1266,105 @@ the reporter not named, every state recorded, and a pass recorded as the
 failure; so did 8ebdbf8's record of times. The `onInit` is caught only by
 the order inside the run: the test as 1bbf77f and aeeefb4 had it asked the
 sequencer after each run, where the record was still full.
+
+### 2026-11-12: the record shared between a sweep's workers
+
+The entry before left the static mutants above vitest 4: their tests
+before a kill came to 11,731 to 17,936 on vitest 4, and to 23,734 to 29,259
+in main's seven sweeps with the record (42605314127, 42654316394,
+42978602031, 43027321280, 43057280143, 43065714069, 43127272218), where
+the mutants that are not static were back in vitest 4's range. Static mutants never time out, Stryker runs them last
+in each shard, and the vitest runner reloads them without a restart, so
+what orders their files is the record each worker carries into that phase.
+The candidate the entry named: vitest 4's cache file was read once when a
+process started and rewritten whole by every worker after each run, so a
+worker Stryker starts in place of one that timed out, about 230 a sweep,
+began with what the last writer held, where the record in memory begins
+empty.
+
+**The experiment.** spec-family/spec-core#74, closed unmerged, shared the
+record the same way, through a file each shard's workers read once when
+they started and wrote whole after each run, and logged every run with the
+order the record in memory alone would have given. Its sweep, run
+43041182999 at c0f925f, beside vitest 4's last and main's last:
+
+| | Vitest 4, 0fa9a47 (42518653077) | Main, 92e46d4 (43027321280) | Shared, c0f925f (43041182999) |
+| --- | ---: | ---: | ---: |
+| The static mutants' tests before their kills | 17,936 | 29,259 | 17,664 |
+| Static kills after more than 200 tests | 27 | 46 | 25 |
+| Tests to a kill, the mutants that are not static | 4.91 | 4.81 | 4.77 |
+| Killed, timed out, survived | 5,523, 239, 203 | 5,500, 230, 191 | 5,502, 228, 191 |
+| Score | 96.48% | 96.66% | 96.66% |
+| Six jobs, the slowest | 30m31s | 25m40s, 5m48s | 26m35s, 5m19s |
+
+No verdict moved that the order alone does not move. The drop is in the
+sources whose static mutants a quick unit file kills: among the 241 static
+mutants killed in all three, `src/pattern/regex.ts`'s took 3,153 tests on
+vitest 4, 5,135 on main and 476 shared, `src/jsonrpc/mcp.ts`'s 990, 3,690
+and 893, `src/pattern/glob.ts`'s 816, 2,667 and 447. `src/text/width.ts`'s
+did not come back: 1,159 on vitest 4, 1,925 to 3,409 on main, 3,053 shared.
+
+The logs show where. The six shards ran 89 worker processes: 24 started
+before the dry run had written the record, four a shard, and 65 in place of
+one that timed out, 62 of them reading failures from the file. The two
+orders differ only after such a start. Of the 274 static kills the logs
+place, the two orders differed in 13, and the order of the record in memory
+alone would have run 3,518 more tests for them, 10 worse and 3 better: the
+static mutant of `src/pattern/automaton.ts` at 287, killed by
+`tests/pattern/glob.test.ts`, after 124 tests shared and 933 by the other
+order, as on main, where vitest 4 took 123; `regex.ts` 90, 26 against 813.
+The rest of the difference is the history a restarted worker builds on its
+own order before the static phase, which one sweep does not separate from
+main's own spread of 3,500 between sweeps.
+
+**On main.** `vitest.mutation.config.ts` keeps the record in memory, as
+before, and shares it as the experiment did, where the process is one of
+Stryker's workers: Stryker names each in its environment
+(`STRYKER_MUTATOR_WORKER`) and runs it in the sweep's sandbox, so the file
+is `.vitest-order-record.json` in the folder the worker runs in, where
+Stryker's vitest runner writes its own setup file. A worker reads it once,
+when it loads the configuration, and the reporter writes the record whole
+after each run (`onTestRunEnd`), to a file of the process's own renamed
+over the shared one, so a reader never meets half a record. No workflow
+names the file, a sweep in one process shares it as a shard does, the
+file's paths are always its own sandbox's, and it goes with the sandbox. A
+process that is not a worker, `npm test` or a test that loads the file,
+reads and writes none. A file missing, unreadable or not a record reads as
+none, a verdict that is not `true` or `false` is dropped, and a write that
+fails is left for the next run: the order reads the record in memory, and
+the file is only what a worker started later begins with.
+
+It is read once and not again. A record read back before each sort would
+be vitest 5's cache again: a file that failed in one worker failed for
+every worker after, which is the record's reason to be.
+
+**Tests.** `tests/mutation-shards.test.ts` holds the file by vitest made as
+Stryker's runner makes it, in processes of their own run in a sandbox of
+two files. A first worker leaves `long` failed in the file; a process that
+is not a worker then runs the quicker first, by the times vitest's cache
+kept, and leaves the file as it was; a worker started after it runs `long`
+first. A worker that passes `long`, after which another writes it failed
+again, runs the quicker first in its next run, and leaves its own record in
+the file. The functions that name, read and write the file are held as a
+library: the folder of a worker and nowhere else, a round trip that leaves
+no file of its own beside the shared one, nothing from a file missing,
+unreadable or not an object, and no throw where nothing can be written.
+Five breaks, put in by hand one at a time, each failed one of these tests
+or more: the file not read, read by any process, read before each sort,
+not written, and written without the rename.
+
+**The pull request's sweep.** Run 43146088133, at bc4b903, beside main's
+last three:
+
+| | 0b71c3f (43127272218) | 69c41bc (43065714069) | cd776a0 (43057280143) | bc4b903 (43146088133) |
+| --- | ---: | ---: | ---: | ---: |
+| The static mutants' tests before their kills | 26,494 | 23,734 | 26,144 | 17,621 |
+| Static kills after more than 200 tests | 40 | 38 | 42 | 25 |
+| Tests to a kill, the mutants that are not static | 4.86 | 4.86 | 4.84 | 4.78 |
+| Killed, timed out, survived, without coverage | 5,499, 231, 191, 7 | 5,501, 229, 191, 7 | 5,499, 231, 191, 7 | 5,501, 229, 191, 7 |
+| Score, over 5,928 | 96.66% | 96.66% | 96.66% | 96.66% |
+| Six jobs, the slowest, in minutes | 25.1, 6.1 | 31.6, 5.6 | 27.8, 5.9 | 26.2, 5.3 |
+
+The static mutants are back in vitest 4's range, as in the experiment,
+and no survivor is new or gone against any of the three: 198 undetected in
+each.

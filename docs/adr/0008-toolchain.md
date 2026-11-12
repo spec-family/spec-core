@@ -497,6 +497,10 @@ run in which it passed. When a vitest release fails that assertion, its
 cache forgets a failure as vitest 4's did, and the record may go: in a pull
 request that takes it out and nothing else, whose full sweep reads a mean
 within the range of the sweeps with it.
+*Amended 2026-11-12*: and the record is what a worker Stryker starts after
+a timeout begins with, by the amendment below, which vitest's cache does
+not give it however it keeps a failure; a pull request that takes the
+record out reads the static mutants' tests before their kills as well.
 
 ## Amended 2026-11-12: a pull request runs four legs
 
@@ -526,3 +530,36 @@ is found on main rather than on the pull request, and a release still
 runs every leg before it stages a version. Moving a leg into or out of
 the matrix is the procedure above; which legs a pull request runs is this
 amendment's to change.
+
+## Amended 2026-11-12: the record shared between a sweep's workers
+
+The static mutants' tests before their kills stayed above vitest 4's with
+the record, 23,734 to 29,259 in main's seven sweeps against 11,731 to 17,936, and
+the reason was the worker Stryker starts in place of one that timed out: on
+vitest 4 it read the cache file the other workers kept rewriting, and with
+the record in memory alone it began empty (ADR-0007, the entry of
+2026-11-12, which has the experiment and the measurements). So the workers
+of one sweep share the record through `.vitest-order-record.json` in
+Stryker's sandbox: a process Stryker names a worker (`STRYKER_MUTATOR_WORKER`)
+reads the file once, when it loads the configuration, and `lastRun` writes
+the record whole after each run, through a file of the process's own
+renamed over it. A process that is not a worker reads and writes none. No
+workflow changes: the sandbox is the shard's, or the one-process sweep's.
+
+**Step 4 carries it.** Each tool's configuration file that has the
+sequencer takes, beside `failedLast`, `QuickestFirst` and `lastRun`:
+`RECORD_FILE`, `recordFile`, `readRecord` and `writeRecord`, the record read
+once where the module loads, and `onTestRunEnd` in `lastRun`. In spec-brief
+and spec-harness both sweeps' suites take the record from that one file,
+and each sweep shares it through the same name in its own sandbox: a
+sandbox is one sweep's. The tool's test of the order takes the tests of
+`tests/mutation-shards.test.ts` here: the workers in processes of their own
+in a sandbox of two files, and the three functions as a library.
+
+Each tool's pull request runs its full sweep and is held, against that
+tool's last sweep of main, to three readings: the score, which an order
+does not move beyond the spread between main's own sweeps; the survivors,
+new and gone, each read; and the static mutants' tests before their kills,
+the third number the command of the amendment of 2026-11-09 prints, which
+should fall. The tool's mutation ADR records the three, and the slowest
+shard.

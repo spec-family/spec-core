@@ -38,6 +38,21 @@ copies a module names the spec-core commit in its own changelog.
   pace. One job, `all green`, needs every other, so that a main ruleset can
   require a single check (ADR-0008, amended 2026-11-12).
 
+- **A worker of the mutation sweep that Stryker starts after a timeout
+  begins with the order's record the others left, as on vitest 4.** The
+  record of each test file's last verdict was kept in each worker's memory,
+  so a worker started in place of one that timed out began with none, where
+  vitest 4's began with the cache file every worker rewrote. Static mutants
+  run last, mostly on such workers, and ran 23,734 to 29,259 tests before
+  their kills in main's sweeps, against 11,731 to 17,936 on vitest 4. The
+  workers of one sweep now share the record through a file in Stryker's
+  sandbox, read once when a worker starts and written whole after each run;
+  the sweep of the change read 17,621 with the score and the survivors
+  unchanged (ADR-0007 and ADR-0008, amended 2026-11-12). No module
+  changes, and no file's hash.
+  Upgrading: nothing for a tool's user. Each tool takes it in a pull request
+  of its own, with a full sweep.
+
 - **The mutation sweep again runs first the test file that failed when the
   worker last ran it, as it did on vitest 4.** Vitest 5's cache, which the
   order in `vitest.mutation.config.ts` read, keeps a failure from a run
