@@ -23,6 +23,32 @@ copies a module names the spec-core commit in its own changelog.
   Nothing a tool reads changes until it reads the field; spec-graph is to
   resolve an anchor against it beside the two it reads.
 
+- **`color`: whether a report draws colour, and its marks in ASCII**, from
+  what the caller read of the process and what its command line asked:
+  `useColor` and `useAscii`, as ADR-0005 writes the rules. spec-brief,
+  spec-graph and spec-guard each wrote the colour decision, and on their
+  mains of 2026-11-12 the three answered alike for every one of 5,400
+  combinations of the variables, a terminal and an option, which
+  `tests/color.test.ts` holds them to (ADR-0001, amended 2026-11-12).
+
+- **`report`: what a tool writes for a forge**: `githubCommand`,
+  `escapeData` and `escapeProperty` for GitHub's workflow commands, with
+  the end of a range and the columns where given; `gitlabIssues`,
+  `gitlabSeverity` and `fingerprintKeys` for GitLab Code Quality, with the
+  hash the caller gives and either of the two ways the tools write the key;
+  `sarifLog` for SARIF 2.1.0, with columns, related places, fingerprints,
+  properties, a rule's `helpUri`, `%SRCROOT%` and notes where given; and
+  `findingText`, the message with its hint. `tests/report.test.ts` holds
+  each tool's writer of 2026-11-12 against what the module builds from the
+  same findings (ADR-0001, amended 2026-11-12).
+
+- **`tests/text-guard.test.ts`: spec-guard's own line table and mask
+  against `text`'s**, which every tool counts by: a lone `\r` ends a line
+  in `text` and not in spec-guard, which also opens an empty line after a
+  final `\n` and blanks a `\r` in a mask. Nothing in `text` changes; the
+  test is what spec-guard reads before it moves (ADR-0001, amended
+  2026-11-12).
+
 - **`findClaims` in `markdown`: the list items that open with a label of a
   vocabulary the caller names**, `` - `Implemented`: ``, each with its label,
   every label its own text writes, and the item, whose range holds what is

@@ -2,7 +2,7 @@
   "name": "@spec-family/spec-core",
   "version": "0.1.0",
   "private": true,
-  "description": "The shared, pure core of the spec-* tools: POSIX paths, glob dialects with a non-backtracking matcher and intersection, a Markdown structure scanner, front matter, and JSON-RPC framing.",
+  "description": "The shared, pure core of the spec-* tools: POSIX paths, glob dialects with a non-backtracking matcher and intersection, a Markdown structure scanner, front matter, JSON-RPC framing, and the colour and report formats every tool writes.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -28,6 +28,14 @@
     "./jsonrpc": {
       "types": "./dist/jsonrpc/index.d.ts",
       "default": "./dist/jsonrpc/index.js"
+    },
+    "./color": {
+      "types": "./dist/color/index.d.ts",
+      "default": "./dist/color/index.js"
+    },
+    "./report": {
+      "types": "./dist/report/index.d.ts",
+      "default": "./dist/report/index.js"
     },
     "./package.json": "./package.json"
   },

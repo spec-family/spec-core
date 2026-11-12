@@ -31,7 +31,7 @@ with a test that `dependencies` is empty and every import is relative or
 
 ## Decision
 
-**One repository, five modules, each copied byte for byte into the tools that
+**One repository, five modules (seven since 2026-11-12), each copied byte for byte into the tools that
 use it, and each copy verified by hash.**
 
 ```text
@@ -67,6 +67,62 @@ jsonrpc   MCP over JSON-RPC 2.0, both protocol eras, line framing
   excludes `src/vendor/**` from its own Stryker and coverage configuration; the
   core's sweep is the measurement, and a tool's score is not diluted or padded
   by code it does not own.
+
+*Amended 2026-11-12*: **two modules more, `color` and `report`, and `text`'s
+line table as the one every tool counts by.** Round 29's evaluation of the
+four tools found the same decisions written in each, and drifting:
+
+```text
+color     whether a report draws colour, and its marks in ASCII
+report    GitHub's workflow commands, GitLab Code Quality, a SARIF log
+```
+
+- **`color`** decides from what the caller read of the process - its
+  environment, whether the stream is a terminal, the platform, the tool's
+  own variable for ASCII - and what its command line asked, as ADR-0005
+  writes the rules. spec-brief (`src/cli.ts` `useColor`), spec-graph
+  (`src/report.ts`) and spec-guard (`src/reporter.ts`) each wrote it, and on
+  their mains of 2026-11-12 the three answered alike for every one of 5,400
+  combinations of `NO_COLOR`, `FORCE_COLOR`, `TERM`, `CI`, a terminal and an
+  option (`tests/color.test.ts`). They differed only in where the option is
+  read: spec-brief and spec-guard inside the function, spec-graph in its
+  caller; and spec-graph and spec-guard read the platform from `process` for
+  the marks, which here is the caller's to pass. spec-harness draws no
+  colour.
+- **`report`** builds what a tool writes and leaves the writing to it. The
+  four tools escaped a workflow command alike, in four copies; they wrote
+  its title three ways (`spec-brief <rule>` and `spec-harness <rule>`, the
+  bare rule in spec-guard, and spec-graph's `(strict)` after a rule only
+  `--strict` made an error), which each tool keeps by passing its title; and
+  none wrote a column, which `githubCommand` writes where it is given. The
+  hint follows the message in each, and spec-harness alone drops a
+  message's own full stop first, which `findingText` does. GitLab's
+  fingerprint is a hash of the identity in all four, written two ways - a
+  JSON array with the occurrence from 2 in spec-brief and spec-graph, parts
+  joined by U+0000 with the count before from 1 in spec-guard and
+  spec-harness - and `fingerprintKeys` writes either, since a change of way
+  reopens every issue once; the hash is the caller's, because nothing here
+  imports `node:crypto`. The SARIF logs shared a frame and differed in their
+  parts (columns and related places only in spec-graph, `%SRCROOT%` only in
+  spec-brief and spec-harness, no fingerprint in spec-brief), and `sarifLog`
+  takes each part where it is given and writes `semanticVersion` beside
+  `version`. `tests/report.test.ts` holds each tool's writer, cut to what it
+  builds from a finding, against what the module builds from the same.
+- **`text`** counts `\n`, `\r\n` and a lone `\r` as a line's end, as
+  CommonMark does, and that is the count every tool reports lines by.
+  spec-guard kept its own `lineStarts`, `locate` and `maskRanges`, which end
+  a line at `\n` alone: on a document with a lone `\r` it put a finding on
+  line 9 where spec-graph put it on line 12. `tests/text-guard.test.ts`
+  pins the three ways the two differ, over every text of up to seven
+  characters of `a`, `\n` and `\r`: a lone `\r` before another character
+  ends a line here and not there; after a final `\n` spec-guard opens an
+  empty line, which `locate` reaches at the text's end; and its mask blanks
+  a `\r`, which this keeps.
+
+Each tool moves to these after its round-29 session has finished, in a
+release of its own that keeps what its user sees, and names the spec-core
+commit in its CHANGELOG. spec-guard's move to `text` changes the line of a
+finding in a document with a lone `\r`, which its CHANGELOG says.
 
 ## Alternatives
 

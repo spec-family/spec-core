@@ -25,6 +25,8 @@ Every module is checked against at least one thing it did not write:
 | `pattern` regex | `RegExp`, over a written corpus and a generated one (moved from spec-graph). |
 | `markdown` | Every scanner it replaces, run side by side, each difference named in a test as a fix or a dialect; invariants over a generated corpus. |
 | `jsonrpc` | The protocol revisions it serves, message by message. |
+| `color` | The decision each tool made before, run side by side over every combination of the variables it reads (`tests/color.test.ts`). |
+| `report` | Each tool's own writer, cut to what it builds from a finding, given the same findings (`tests/report.test.ts`). |
 
 Then mutation testing, for the question the above cannot answer - does a test
 pin down each decision. The sweep covers all of `src/` against all of

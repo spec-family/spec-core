@@ -40,7 +40,7 @@ guided by prompts, and checked by a tool.
 
 | Planned | Where it lives | What changed |
 | --- | --- | --- |
-| spec-core | **spec-core** | modules: `path`, `text`, `pattern`, `markdown`, `jsonrpc` |
+| spec-core | **spec-core** | modules: `path`, `text`, `pattern`, `markdown`, `jsonrpc`, `color`, `report` |
 | spec-brief-author | cancelled | its context, guard and status became spec-harness; its wave scheduling became `spec-brief schedule` |
 | agent-brief-harness | **spec-harness** | the family's one agent-facing tool; named like its siblings |
 | spec-probe | `spec-harness probe` | runs a declared test at the base commit in a temporary worktree; a failure signature is declared (JUnit XML or exit code and message), not compared as prose |
