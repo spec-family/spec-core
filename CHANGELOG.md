@@ -104,6 +104,14 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Documentation
 
+- The adopting guide's CI jobs run `spec-harness audit --if-round`, from
+  spec-harness 0.25.0, after `premises`, in GitHub's annotations and
+  GitLab's Code Quality: the round's report as a whole on a branch that
+  names a brief, and one line and exit `0` on any other and on a round's
+  last pull request, whose branch archived its brief, where `audit` alone
+  exits `2`. Each job fetches the base with its history for it,
+  `fetch-depth: 0` on GitHub and `GIT_DEPTH: 0` on GitLab, so `doctor` is
+  one more step in the GitHub job rather than a second checkout.
 - The overview's *Measured* section no longer copies each repository's
   mutation score, mutants, commit and run from one day's sweeps, which every
   release left behind. It links, for each repository, to where the score is
