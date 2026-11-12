@@ -34,7 +34,7 @@ sweep's last job fails for one too (ADR-0007, 2026-10-12).
 | `src/<module>/` | One module per directory; `index.ts` only re-exports. |
 | `modules.json` | Which modules each module may import. |
 | `tests/` | Unit, oracle, enumeration and differential tests; `boundaries.test.ts` holds the rules above. |
-| `scripts/vendor.mjs` | Copies modules into a tool and checks a tool's copy. |
+| `scripts/vendor.mjs` | Copies modules into a tool, and checks a tool's copy against its record and against spec-core now (`tests/vendor.test.ts`). |
 | `scripts/mutation-shards.mjs`, `stryker.shard.config.mjs` | Split CI's mutation sweep into shards, and merge their reports into one score under the gate. |
 | `scripts/mutation-timeline.mjs` | Reads the minutes each file took off a sweep's log, to balance the shards, and counts the mutants killed late and those that timed out on the clock. |
 | `scripts/mutation-unmeasured.mjs` | Counts the places a mutator applies that stand under a TypeScript `as`, in the tree or in a sweep's merged report, and fails a count above the one it records as left. |
