@@ -123,10 +123,13 @@ copies a module names the spec-core commit in its own changelog.
   words are `error`, `warning` and `note`, every tool reads `warn` and
   `info` as two of them, and the text format is `human`, with `pretty`
   taken for it. The lifecycle table gains `deferred`, not in force in every
-  tool: spec-graph reads it as retired, as it does, and spec-guard is to
-  stop executing a deferred document's directives, which the maintainer
-  confirms first. The paragraph on GitLab fingerprints no longer names as
-  open the two defects spec-brief 0.3.0 and spec-guard 0.17.0 fixed.
+  tool, as the maintainer decided on 2026-11-12: spec-graph reads it as
+  retired, as it does, and spec-guard stops executing a deferred document's
+  directives from its first release in round 30, with an `Upgrading:` line.
+  A file over 20 MiB is named and not read, in every tool that reads files
+  by pattern: spec-guard's limit, which spec-graph raises its 4 MiB to. The
+  paragraph on GitLab fingerprints no longer names as open the two defects
+  spec-brief 0.3.0 and spec-guard 0.17.0 fixed.
 - ADR-0009 and the overview say the freeze began with round 28's batch,
   spec-brief 0.14.0, spec-graph 0.25.0, spec-guard 0.34.0 and spec-harness
   0.25.0, where "the first release after round 27" also read as the patches

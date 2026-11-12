@@ -332,6 +332,24 @@ tool's CLAUDE.md can point.
 - **Nothing measured is not clean.** A check that inspected nothing - an empty
   scope, a diff that was never read, a base equal to the head - says so, and
   under `--strict` refuses.
+
+  *Amended 2026-11-12*: **a file over 20 MiB is named, not read.** A tool
+  reading the files a pattern or a directory gives it reads none larger than
+  20 MiB, 20 × 1,024 × 1,024 bytes, and names each it left out: in the JSON
+  document a script reads, in a list of what was skipped with the reason,
+  and in the text report as a note. Such a file is never counted as read,
+  so its findings are not reported clean. Round 29's evaluation found the
+  two tools that read files by pattern apart and both silent: spec-guard
+  left a file over its 20 MiB out of a directory's scope with `skipped: []`
+  in its JSON, and `--strict` passed; spec-graph left a Markdown file over
+  its 4 MiB out, and its hint named the pattern already in use. The family's
+  limit is spec-guard's, so spec-guard reads what it read, names what it
+  skips from its round-29 release, and spec-graph raises its limit from 4
+  to 20 MiB. A smaller limit, 16 MiB, was proposed and not taken: spec-guard
+  would then stop reading files of 16 to 20 MiB it reads now, which the
+  freeze does not allow (ADR-0009). Each tool keeps the number in its own
+  source for now; spec-core exports none (the maintainer's decision of
+  2026-11-12).
 - **No prompts, no network, no model.** A tool runs unattended in CI and under
   an agent. None calls an LLM: the agent is the LLM, and a tool's answers must
   be the same every time.
@@ -693,7 +711,7 @@ tool's CLAUDE.md can point.
   | `draft`, `proposed` | a brief not yet active | no | not yet in force |
   | `accepted`, `active` | the round in progress | yes | in force |
   | `rejected`, `deprecated`, `superseded` | - | no | retired |
-  | `deferred` | a brief set aside: not scheduled, not active | no (proposed 2026-11-12, below) | retired: absorbs no new work |
+  | `deferred` | a brief set aside: not scheduled, not active | no, from round 30 (below) | retired: absorbs no new work |
   | `archived` | a closed round, frozen | no | **a record, not retired**: depending on it is normal |
 
   *Amended 2026-11-12*: **`deferred` is not in force.** spec-brief writes
@@ -719,11 +737,14 @@ tool's CLAUDE.md can point.
   can absorb new work, and work built on a decision that was put off waits
   on something that may not come.
 
-  spec-guard reporting less is a change the freeze allows (ADR-0009): it
-  names, in its CHANGELOG, the release that first withholds a deferred
-  document, with an `Upgrading:` line for a repository that relied on one's
-  rules, which can run them with `--ignore-status` or write another status.
-  This row is the maintainer's to confirm before spec-guard changes.
+  Decided by the maintainer on 2026-11-12. spec-guard follows in round 30,
+  the first round after the freeze (ADR-0009): a document that ran its
+  directives would stop running them, and a run that failed on one would
+  pass, which the freeze keeps for a later minor. Its first release in
+  round 30 adds `deferred` to the words that withhold a document, and names
+  that release in its CHANGELOG under *Changed*, with an `Upgrading:` line
+  for a repository that relied on a deferred document's rules: run them with
+  `--ignore-status`, or give the document another status.
 
   A premise a brief asserts (the defect still exists) and a goal it asserts
   (the fix is in) are different: premises run on every build with
