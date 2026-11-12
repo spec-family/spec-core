@@ -73,6 +73,11 @@ copies a module names the spec-core commit in its own changelog.
 
 ### Changed
 
+- **A pull request runs no macOS leg**: GitHub could not supply a
+  `macos-26` runner several times on 2026-11-12, and a leg it cannot start
+  fails `all green`, which main's ruleset requires. macOS runs on main and in
+  releases (ADR-0008, amended 2026-11-13).
+
 - **A pull request runs four legs of the suite's matrix, not nine**: Node
   22 and 26 on `ubuntu-24.04`, and Node 22 on Windows and macOS. A push to
   main, a manual run and a release still run every leg. With several pull
