@@ -126,6 +126,14 @@ per file. The tool keeps a test that recomputes those hashes, excludes
 `src/vendor/**` from its own mutation sweep and coverage, and commits the copy
 as an ordinary diff.
 
+The second compares the tool's copy with its record and with spec-core as it
+is now. It names each file edited or missing in the tool, each file changed,
+added or removed in spec-core since the copy, a module the tool has not
+copied that one it copied may import, and a module spec-core no longer has;
+then the `--into` command that copies the tool's modules again. It exits 0
+when the copy matches, 1 for a difference, and 2 for arguments it cannot
+read or a directory with no `VENDOR.json`.
+
 ## Decisions
 
 | ADR | Decision |

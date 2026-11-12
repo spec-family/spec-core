@@ -95,6 +95,19 @@ copies a module names the spec-core commit in its own changelog.
   Upgrading: nothing for a tool's user. Each tool takes it in a pull request
   of its own, with a full sweep.
 
+- **`scripts/vendor.mjs --check` names a module the tool has not copied
+  that one it copied may import, and a module spec-core no longer has**, and
+  after any difference it names the command that copies the tool's modules
+  again: `to copy again, in spec-core: node scripts/vendor.mjs --into <tool>
+  --modules <its modules>`, with `--dir` when it was given one. A module
+  that gained a dependency in `modules.json` reached for a module the tool
+  never had, and `--check` passed it. A directory with no `VENDOR.json` is
+  refused with exit 2, where `--check` said the copy matched. Every line it
+  printed before is printed as it was, and it exits 1 for a difference as
+  before. `tests/vendor.test.ts` runs the script on tools made in a
+  temporary directory; it had no test. A scheduled job is to run it against
+  each tool once the four have copied round 29's modules.
+
 - **The mutation sweep again runs first the test file that failed when the
   worker last ran it, as it did on vitest 4.** Vitest 5's cache, which the
   order in `vitest.mutation.config.ts` read, keeps a failure from a run

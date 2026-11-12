@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Copies spec-core modules into a tool, byte for byte, and records their
- * hashes; or checks that a tool's copy is still what was copied.
+ * hashes; or checks a tool's copy against its record and against spec-core as
+ * it is now, and names the command that copies it again.
  *
  *   node scripts/vendor.mjs --into ../spec-brief --modules pattern,markdown
  *   node scripts/vendor.mjs --check ../spec-brief
@@ -14,6 +15,13 @@
  * every other copy. docs/adr/0001-one-core-copied-by-hash.md. spec-core's
  * LICENSE goes beside them too: the tool's package carries the compiled
  * copies, so it ships that notice.
+ *
+ * `--check` exits 0 when the copy matches, 1 when it names a difference, and
+ * 2 for arguments it cannot read or a directory with no `VENDOR.json`, which
+ * holds no copy to check: a wrong path or a copy moved elsewhere fails rather
+ * than passing a job that runs it on a schedule. This is spec-core's own
+ * maintenance script, not one of the family's tools, so the contract's exit
+ * codes (ADR-0005) and the freeze on them do not cover it.
  *
  * Nothing here runs at install or build time in any tool; it is run by a
  * person, and its result is a diff that person commits.
@@ -138,6 +146,8 @@ function vendor(options) {
 
 function check(options) {
   const target = join(resolve(options.check), options.dir);
+  // Without a record there is nothing to check, and saying the copy matches would be a pass on a wrong path.
+  if (!existsSync(join(target, 'VENDOR.json'))) fail(`${target} has no VENDOR.json; --check names the root of a tool that copies spec-core`);
   const record = readVendor(target);
   const problems = [];
   if (!existsSync(join(target, 'LICENSE'))) problems.push('LICENSE is missing; the copies ship under it');
@@ -153,12 +163,28 @@ function check(options) {
     for (const name of existsSync(join(ROOT, 'src', module)) ? sourceFiles(module) : []) {
       if (!(name in files)) problems.push(`${module}/${name} is new in spec-core and not in the tool`);
     }
+    // A module that gained a dependency in modules.json reaches for a module the tool never copied.
+    if (!(module in MANIFEST)) problems.push(`${module} is no longer a spec-core module; its copy is the tool's to remove`);
+    else {
+      for (const dependency of MANIFEST[module]) {
+        if (!(dependency in record.modules)) problems.push(`${module} may import ${dependency} (modules.json), which the tool has not copied`);
+      }
+    }
   }
   if (problems.length > 0) {
+    const current = Object.keys(record.modules).filter((module) => module in MANIFEST);
+    if (current.length > 0) problems.push(`to copy again, in spec-core: ${copyAgain(options, current)}`);
     process.stdout.write(`${problems.join('\n')}\n`);
     process.exit(1);
   }
   process.stdout.write(`${Object.keys(record.modules).join(', ')}: the copy matches spec-core\n`);
+}
+
+/** The command that copies these modules into the tool again, naming the tool and the directory as the person did. */
+function copyAgain(options, modules) {
+  const word = (text) => (text.includes(' ') ? JSON.stringify(text) : text);
+  const dir = options.dir === DEFAULT_DIR ? '' : ` --dir ${word(options.dir)}`;
+  return `node scripts/vendor.mjs --into ${word(options.check)} --modules ${modules.join(',')}${dir}`;
 }
 
 const options = parseArgs(process.argv.slice(2));
