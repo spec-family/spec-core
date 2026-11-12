@@ -225,6 +225,17 @@ copies a module names the spec-core commit in its own changelog.
   and project rules, the third way to extend the family. *Dispositions* says
   what the word means in spec-brief and in spec-graph, and that the rule id
   `stale-premise` names two checks.
+- The overview says what sets the family apart, read against its neighbours
+  on 2026-11-12: a rule stated in a sentence and held only while its
+  document is accepted; one round's scope held at the write, the commit and
+  CI; a protection lifted only by a signed ruling; and claims, ticks and
+  figures in any Markdown held to evidence. No runtime dependencies, no
+  account and npm's provenance are no longer among them, since Specgate has
+  all three. Its neighbours gain Specgate, the closest of them, with its
+  test-first guard for Claude Code and OpenCode; TestGuard, whose
+  claim-driven mutation testing asks more of a test than `spec-guard prove`;
+  and AWS's AI-DLC, whose deterministic sensors can hold a stage's gate.
+  Each statement is linked to where it was read, with the date.
 - The adopting guide's CI jobs run `spec-harness audit --if-round`, from
   spec-harness 0.25.0, after `premises`, in GitHub's annotations and
   GitLab's Code Quality: the round's report as a whole on a branch that

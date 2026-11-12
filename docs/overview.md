@@ -73,12 +73,53 @@ record they cite. [Adopting](adopting.md) goes from one tool to the whole
 loop, and the [tutorial](tutorial.md) runs one round from the brief to the
 archive.
 
+## What sets it apart
+
+Read against the neighbours below on 2026-11-12, four things are the
+family's alone:
+
+- **A rule stated in a sentence, held only while its document is
+  accepted.** A spec-guard directive stands under the sentence it makes
+  executable, in any Markdown, and runs while its document is in force: a
+  draft or a proposal states a rule without enforcing it, and a superseded
+  decision stops being enforced the day it is superseded
+  ([document status](https://github.com/spec-family/spec-guard/blob/main/docs/reference/document-status.md)).
+- **One round's scope, held at the write, at the commit and in CI.** A brief
+  names the files its round may change and the files it protects, for that
+  round alone. spec-harness refuses an agent's write to a protected file
+  before it happens, git's pre-commit hook refuses the commit where
+  `spec-harness init --git-hook` installed it, and `spec-harness audit` and
+  `spec-brief archive` measure everything the round changed, whatever wrote
+  it
+  ([spec-harness](https://github.com/spec-family/spec-harness/blob/main/docs/reference/guard.md)).
+- **A protection lifted only by a signed ruling.** A round that needs a
+  protected file asks a person, and the file opens only by a commit signed
+  with a key the base branch's allowed signers list - a signature git
+  verifies, not a name in a trailer or an approval recorded on trust
+  ([rulings](https://github.com/spec-family/spec-harness/blob/main/docs/reference/rulings.md)).
+- **Claims, ticks and figures in any Markdown, held to evidence.** An
+  `Implemented` claim needs a test a directive counts and `spec-guard prove`
+  shows can fail; a ticked box or a row marked done needs a commit git
+  holds; a marked figure needs a dated result in a measurement record; a
+  register's row needs what its status asks for. They are held where they
+  are written - a specification, a roadmap, a README - not only in a
+  requirements file of the tool's own
+  ([claims and evidence](https://github.com/spec-family/spec-graph/blob/main/docs/reference/claims-and-evidence.md),
+  [claims](https://github.com/spec-family/spec-guard/blob/main/docs/reference/claims.md)).
+
+No runtime dependencies, no account and a release published with npm's
+provenance are no longer among them: Specgate, below, has all three, by its
+registry entry on 2026-11-12. The family keeps them, and the
+[Measured](#measured) section says where each is kept. Its largest gap is
+the other side of the second item: the guard before a write runs under one
+agent ([below](#what-the-tools-do-not-do)).
+
 ## Neighbours
 
 Each statement below about another project was read from that project's own
-repository, documentation or registry entry on 2026-11-09, and links to
-where it was read. These projects change every week: follow the link before
-relying on one.
+repository, documentation or registry entry on 2026-11-09, or on 2026-11-12
+for Specgate, TestGuard and AWS's AI-DLC, and links to where it was read.
+These projects change every week: follow the link before relying on one.
 
 ### Spec-driven development: Spec Kit and OpenSpec
 
@@ -102,6 +143,49 @@ work together: spec-graph reads both layouts
 with no configuration, the checkboxes of a Spec Kit `tasks.md` as the
 feature's open work, and an archived OpenSpec change as a record
 ([spec-graph](https://github.com/spec-family/spec-graph/blob/main/docs/reference/sdd-layouts.md)).
+
+AWS's [AI-DLC](https://github.com/awslabs/aidlc-workflows) (MIT-0) is a
+workflow for coding agents in phases and stages, each closed at a gate a
+person approves, with an audit trail of what happened. Its **sensors** are
+deterministic checks, `kind: deterministic` being the only kind it accepts,
+that fire on matching writes or at a stage's gate; a sensor bound to a gate
+as `blocking` keeps the gate shut unless it passes, and every firing is
+recorded
+([sensors](https://github.com/awslabs/aidlc-workflows/blob/main/docs/harness-engineering/06-sensors.md)).
+DocGuard ships such a sensor
+([its guide](https://github.com/raccioly/docguard/blob/main/docs/guides/aidlc.md)).
+Each spec-family tool's exit code is what a sensor reads, and none ships as
+one yet.
+
+### Requirements gated on tests: Specgate
+
+[Specgate](https://github.com/rsaglobaltech/specgate) (MIT,
+`@rsaglobaltech/specgate`) keeps numbered requirements with Gherkin
+scenarios in the repository; a test that names a requirement's id is its
+evidence, `specgate check` fails a pull request where a delivered
+requirement has no scenario or no test naming it, or the suite fails, and
+`specgate apply` marks a requirement `Implemented` only once a test names it
+and the gate passes ([README](https://github.com/rsaglobaltech/specgate)).
+`specgate verify` holds each scenario an archived OpenSpec change claims to a
+test that names it
+([OpenSpec](https://github.com/rsaglobaltech/specgate/blob/main/docs/openspec.md)).
+Since 0.28.0, of 2026-11-07, a Claude Code and OpenCode guard refuses a
+write to source unless a new or changed test names a requirement of an open
+change: test first, for every source file, with tests, specifications and
+Markdown never refused
+([agents](https://github.com/rsaglobaltech/specgate/blob/main/docs/agents.md),
+[CHANGELOG](https://github.com/rsaglobaltech/specgate/blob/main/CHANGELOG.md)).
+An MCP server ships in the package. Its 0.33.2 has no runtime dependencies
+and npm's provenance attestation
+([registry](https://registry.npmjs.org/@rsaglobaltech%2fspecgate)).
+
+Specgate is the closest neighbour, and shares the family's footing: one
+package, no account, deterministic, provenance. It holds requirements it
+numbers itself to the tests that name them; spec-guard holds a claim in any
+Markdown, and asks that `spec-guard prove` show the directive counting its
+test can fail. Its guard asks for a test before code; spec-harness's guard
+holds the files one brief protects for one round, and opens one only by a
+signed ruling.
 
 ### ADR enforcement: Archgate, Mneme and adrkit
 
@@ -142,7 +226,7 @@ who ratified a decision as an identity it is told
 fails the build where the code breaks a rule an ADR states, and a ruling's
 signature is verified, not declared.
 
-### Documentation checks: DocGuard and ctxgrd
+### Documentation checks: DocGuard, TestGuard and ctxgrd
 
 [DocGuard](https://github.com/raccioly/docguard) (MIT, Node 18 or later, one
 pinned runtime dependency) runs 36 validators, by its README on 2026-11-09,
@@ -157,6 +241,22 @@ the spec family asks of an `Implemented` claim a directive that counts a test
 by its name and that `spec-guard prove` shows can fail, and of a ticked box a
 commit git holds; and spec-harness refuses an agent's write before it
 happens, where DocGuard's hook speaks after it.
+
+DocGuard's author also publishes
+[TestGuard](https://github.com/raccioly/testguard) (MIT, `testguard-cli`,
+Node 20 or later, one pinned runtime dependency): claim-driven mutation
+testing, which injects a fault for each stated claim and reports whether a
+test kills it. A claim may name a requirement, `req:<spec>#<id>`, since
+0.20.0 of 2026-10-11; `probe --require-assertion-kill` refuses a kill that
+came only from an uncaught exception, since 0.21.0 of 2026-11-10; and
+`probe --changed <ref>` takes the claims a change touches, since 0.22.0 of
+2026-11-11
+([CHANGELOG](https://github.com/raccioly/testguard/blob/main/CHANGELOG.md),
+[command line](https://github.com/raccioly/testguard/blob/main/docs/reference/cli.md)).
+That asks more of a test than `spec-guard prove`, which shows a directive
+can fail, not that the test it counts catches a fault. spec-guard holds
+claims written in any Markdown, ticks and figures beside them, where
+TestGuard holds the claims it is given.
 
 [ctxgrd](https://ctxgrd.aktagon.com/) (Elastic License 2.0, one Rust
 binary, prebuilt only for macOS in its 6.x releases) lints documents by
