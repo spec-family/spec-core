@@ -6,8 +6,8 @@ the archive. After them, one claim is followed through the three tools that
 read it. Nothing needs to build; the tools read the text.
 
 Every output below comes from running these steps against the published
-packages, spec-brief 0.13.0, spec-graph 0.24.0, spec-guard 0.33.0 and
-spec-harness 0.24.0, trimmed where a line says `…`. CI replays every step
+packages, spec-brief 0.14.0, spec-graph 0.25.0, spec-guard 0.34.0 and
+spec-harness 0.25.0, trimmed where a line says `…`. CI replays every step
 against those releases on each change to this repository, and fails where an
 output no longer reads as shown here
 ([`scripts/tutorial.mjs`](https://github.com/spec-family/spec-core/blob/main/scripts/tutorial.mjs)).
@@ -77,7 +77,12 @@ The repository has no JavaScript of its own, so `package.json` holds nothing
 but the tools. Every command from here on gives `npx` the package's full name
 and `--no-install`: it runs the install made on the first line and fetches
 nothing ([Names](adopting.md#names) says why the command's name alone is not
-written):
+written).
+
+The commands are bash. On Windows, run them in Git Bash, which Git for
+Windows installs; the tools themselves read Windows paths and a checkout
+with CRLF line endings as they read POSIX ones, and each tool's CI runs it
+on Windows as well as on Linux and macOS.
 
 ```console
 $ npm install --save-dev @spec-family/spec-brief @spec-family/spec-graph @spec-family/spec-guard @spec-family/spec-harness
@@ -129,9 +134,9 @@ claude  init's entries: the guard hooks in .claude/settings.json, the server in 
         Claude Code … runs the hooks, which need 2.1.139 or later
 git     no pre-commit hook runs spec-harness (.git/hooks/pre-commit): …
 
-found     spec-brief  … (0.13.0)
-found     spec-graph  … (0.24.0)
-found     spec-guard  … (0.33.0)
+found     spec-brief  … (0.14.0)
+found     spec-graph  … (0.25.0)
+found     spec-guard  … (0.34.0)
 ```
 
 The note is about the throwaway key, and the `git` line about the hook this
@@ -529,8 +534,9 @@ ID   STATUS    WAVE  TASKS  READY  TITLE
 
 ## In CI
 
-On every change, CI runs the checks that need no round in flight. On `main`
-now, each exits `0`:
+On every change, CI runs the checks, and audits the round where a branch
+names one. On `main` now no round is in flight, so `audit --if-round` says so
+and passes, and each exits `0`:
 
 ```bash
 npx --no-install @spec-family/spec-guard
@@ -538,6 +544,7 @@ npx --no-install @spec-family/spec-graph check
 npx --no-install @spec-family/spec-brief lint
 npx --no-install @spec-family/spec-brief matrix
 npx --no-install @spec-family/spec-harness premises   # 0 premise(s) in 1 live brief(s), 0 no longer hold
+npx --no-install @spec-family/spec-harness audit --if-round   # no brief is named by --brief, SPEC_BRIEF or the branch, so there is no round to audit, and --if-round passes the run
 ```
 
 And it checks a change against the base branch's rules. Suppose a change
@@ -726,7 +733,7 @@ $ npx --no-install @spec-family/spec-guard claims
 spec-guard claims 1 document
 
 ✖ docs/spec/transfers.md:10  `Implemented` needs a test, and no directive under the claim names one (public void )  unevidenced-claim
-    hint: write a directive under the claim that counts the test, as <!-- @assert-count target="..." symbol="fn test_..." min="1" -->, or lower the label
+    hint: write a directive under the claim that counts the test, as <!-- @assert-count target="..." symbol="public void ..." min="1" -->, or lower the label
 
 options from .spec-guard.json: claims
 

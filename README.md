@@ -33,7 +33,8 @@ things only a person should.
     spec-harness audit ─▶ spec-brief archive --dry-run ─▶ person approves ─▶ archive
           │
           ▼
-    CI, every change: spec-guard (code ↔ docs), spec-graph (docs ↔ docs, commits, paths), spec-brief lint
+    CI, every change: spec-guard (code ↔ docs), spec-graph (docs ↔ docs, commits, paths),
+                      spec-brief lint / matrix, spec-harness premises / audit --if-round
 ```
 
 **The smallest useful install is one tool.** spec-guard alone holds code to

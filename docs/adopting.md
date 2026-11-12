@@ -54,6 +54,71 @@ brief is a record, not a retired decision), the base branch rounds are
 measured from, the Claude Code hooks and MCP server. It merges into files you
 have and changes nothing until `--write`.
 
+## Where else the tools run
+
+The same commands run from four other places, each a thin layer over the
+packages above:
+
+- **[spec-family/action](https://github.com/spec-family/action)**, a GitHub
+  Action that runs one tool's command at the release you name, with no
+  install of your own, annotates the pull request and can write SARIF for
+  code scanning. It exits as the tool does.
+- **[The Spec Kit extension](https://github.com/spec-family/spec-kit-extension)**,
+  which gives a Spec Kit project the configuration and the CI job below and
+  has its agent run the checks after `tasks` and `implement`
+  ([Spec Kit and OpenSpec](#spec-kit-and-openspec)).
+- **Two MCP servers**, for an agent that should ask before it writes:
+  `spec-guard mcp` answers which rules are in force for a path
+  ([spec-guard's reference](https://github.com/spec-family/spec-guard/blob/main/docs/reference/query-and-mcp.md)),
+  and spec-harness's server starts a round, checks a path against the brief
+  and asks a person for a ruling
+  ([spec-harness's reference](https://github.com/spec-family/spec-harness/blob/main/docs/reference/mcp.md)).
+  Both are listed in the official MCP Registry, as
+  `io.github.spec-family/spec-guard` and `io.github.spec-family/spec-harness`;
+  `spec-harness init` registers its own in `.mcp.json`.
+- **The Claude Code plugin**, spec-harness's skills, guard hooks and server
+  in one install, `/plugin marketplace add spec-family/spec-harness` and then
+  `/plugin install spec-harness@spec-tools`. Its hooks run the spec-harness
+  the project installed, and it takes the place of `init`'s entries in
+  `.claude/settings.json` and `.mcp.json`, not their side
+  ([spec-harness's README](https://github.com/spec-family/spec-harness#as-a-claude-code-plugin)).
+
+## Spec Kit and OpenSpec
+
+spec-graph reads the layouts both write with no configuration
+([spec-graph's reference](https://github.com/spec-family/spec-graph/blob/main/docs/reference/sdd-layouts.md)):
+
+- **Spec Kit**: each file of `specs/<NNN-feature>/` - `spec.md`, `plan.md`,
+  `tasks.md` and the rest - is a document of its own, named by its path, and
+  `.specify/memory/constitution.md` is read too.
+- **OpenSpec**: `openspec/specs/<capability>/spec.md` and each file of
+  `openspec/changes/<change>/` are documents of their own, and a change under
+  `openspec/changes/archive/` is a record, which citing is normal.
+
+Spec Kit writes `**Status**: Draft` under the title of every specification
+and never changes the line, so spec-guard runs none of the directives in a
+specification and takes none of its tests as a claim's evidence. Name the
+specifications in `ignoreStatus`, in both tools' configurations, and their
+status is not read; every other document's still is
+([ADR-0005](adr/0005-the-family-contract.md#documents-and-state)):
+
+```json
+{ "ignoreStatus": ["specs/**/spec.md"] }
+```
+
+The [extension](https://github.com/spec-family/spec-kit-extension) writes
+that, the claims configuration that holds each requirement marked
+`Implemented` to a test, and the CI job, once the project's first feature has
+a specification:
+
+```bash
+specify extension add spec-family --from https://github.com/spec-family/spec-kit-extension/archive/refs/tags/v0.2.0.zip
+```
+
+Then `/speckit.spec-family.ci` in the agent. OpenSpec writes no status line,
+so its specifications need no `ignoreStatus`: a directive written in one runs
+as it is written anywhere else.
+
 ## Names
 
 Each tool is published under the `@spec-family` scope and installs a command
@@ -159,6 +224,10 @@ of the installed file.
 
 ## CI
 
+The jobs below are written for the releases of 2026-11-12 - spec-brief
+0.14.0, spec-graph 0.25.0, spec-guard 0.34.0 and spec-harness 0.25.0 - and
+later ones; each tool's CHANGELOG says what an older release does otherwise.
+
 Every tool exits `0` when clean, `1` when it found something, and `2` when
 its answer cannot be trusted - a configuration that did not load, an unknown
 key, a directory that does not exist, an option or a variable set to
@@ -190,10 +259,7 @@ detached HEAD it reads the branch the forge's CI names:
 `GITHUB_HEAD_REF`, `GITHUB_REF_NAME` on a branch push,
 `CI_MERGE_REQUEST_SOURCE_BRANCH_NAME` or `CI_COMMIT_BRANCH`
 ([ADR-0004](https://github.com/spec-family/spec-harness/blob/main/docs/adr/0004-the-active-brief-is-named-not-guessed.md)).
-The jobs below rely on that, and on `premises` writing a forge's format,
-and need spec-harness 0.7.0 or later: with 0.6, a round's own merge request
-reports the premise it set out to retire as stale. spec-graph's
-`--format github` needs spec-graph 0.10.0 or later.
+The jobs below rely on that, and on `premises` writing a forge's format.
 
 `spec-harness audit` reports on the round as a whole: what spec-brief's
 archive would refuse, the brief's goals and premises run through spec-guard,
@@ -212,9 +278,8 @@ names any other brief is audited as it is without the flag, and one that
 names a brief spec-brief does not list, or archived before the branch, still
 exits `2`
 ([spec-harness's reference](https://github.com/spec-family/spec-harness/blob/main/docs/reference/audit.md)).
-`--if-round` needs spec-harness 0.25.0 or later; with an earlier release,
-leave the step out. [`doctor`](#doctor-an-optional-step) has what each
-forge's checkout fetches.
+[`doctor`](#doctor-an-optional-step) has what each forge's checkout
+fetches.
 
 ### GitHub Actions
 
@@ -227,7 +292,7 @@ on:
 
 jobs:
   specs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -253,6 +318,10 @@ jobs:
         run: npx --no-install @spec-family/spec-harness audit --if-round --format github
 ```
 
+- The job names its image, `ubuntu-24.04`, rather than `ubuntu-latest`,
+  which GitHub moves from one Ubuntu to the next on a date of its own; the
+  family's own jobs do the same ([ADR-0008](adr/0008-toolchain.md)). Move the
+  label when you choose to.
 - The actions are pinned to commits, with the version beside each, because a
   tag can be moved and a commit cannot; Dependabot's `github-actions` updates
   keep pins like these current.
@@ -321,9 +390,7 @@ spec:
 - The job ends with the worst code, so `allow_failure: exit_codes: [1]` lets
   findings through while you adopt a tool, and a run that cannot be trusted
   (`2`) still fails the pipeline. It names `1` alone and never `2`: a tool
-  that crashes exits `2` since spec-brief 0.6.0, spec-graph 0.13.0,
-  spec-guard 0.20.0 and spec-harness 0.11.0, where an earlier release left
-  Node's exit `1`, which this setting lets through as findings.
+  that crashes exits `2`, which must not pass as findings.
 - GitLab combines several Code Quality reports into one. The merge request's
   Code Quality widget is in every tier, Free included, and compares the merge
   request's report with one from the **target branch's** latest pipeline: the
@@ -351,20 +418,16 @@ exits `1` for any of them, and its log says which
   branch before the branch merges
   ([the tutorial, step 10](tutorial.md#10-archive-and-merge)), so its last
   pull request names a brief spec-brief has archived, under which the guard
-  holds every write. From spec-harness 0.21.0 on, that brief fails nothing
-  there where git says the branch archived it: the archived file is in the
-  head and not at the merge base of the base and the head. Where the base
-  names no commit, or the history is shallow, `doctor` cannot tell, and
-  fails, as 0.20.0 fails every round's last pull request.
-- From spec-harness 0.24.0 on, the base `.spec-harness.json` names is read
-  as the remote's branch, `remotes/origin/main` for `main`, where the
-  checkout has no branch of that name, as a CI checkout has none. An earlier
-  release needs the branch made under that name.
+  holds every write. That brief fails nothing there where git says the
+  branch archived it: the archived file is in the head and not at the merge
+  base of the base and the head. Where the base names no commit, or the
+  history is shallow, `doctor` cannot tell, and fails.
+- The base `.spec-harness.json` names is read as the remote's branch,
+  `remotes/origin/main` for `main`, where the checkout has no branch of
+  that name, as a CI checkout has none.
 - On a runner, where `CI` is set as GitHub Actions and GitLab CI set it,
-  spec-harness 0.24.0 and later neither look for the Claude Code plugin nor
-  require it, so a project the plugin guards passes there. An earlier
-  release fails such a project, with none of `init`'s hooks, on every
-  runner.
+  spec-harness neither looks for the Claude Code plugin nor requires it, so
+  a project the plugin guards passes there.
 
 On GitHub Actions, `actions/checkout` fetches one commit by default, and
 `fetch-depth: 0` fetches the history of every branch and tag; in a pull
@@ -383,11 +446,6 @@ spec-harness 0.24.0 reads the base there, `base    remotes/origin/main` in
       - if: ${{ !cancelled() }}
         run: npx --no-install @spec-family/spec-harness doctor
 ```
-
-With spec-harness 0.23 or earlier, make the branch first in a pull
-request's run, in a step before `doctor`:
-`git branch --force main origin/main`, with the base `.spec-harness.json`
-names.
 
 On Forgejo Actions each `FORGEJO_*` variable is also a `GITHUB_*` one
 (Forgejo's [Actions reference](https://forgejo.org/docs/latest/user/actions/reference/),

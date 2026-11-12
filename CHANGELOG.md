@@ -191,6 +191,27 @@ copies a module names the spec-core commit in its own changelog.
   spec-brief 0.14.0, spec-graph 0.25.0, spec-guard 0.34.0 and spec-harness
   0.25.0, where "the first release after round 27" also read as the patches
   between the rounds.
+- The tutorial replays against round 28's releases, spec-brief 0.14.0,
+  spec-graph 0.25.0, spec-guard 0.34.0 and spec-harness 0.25.0: `doctor`
+  names them, and `spec-guard claims` hints `symbol="public void ..."`, the
+  test prefix the project configured, where 0.33.0 hinted `fn test_...`.
+  Its CI block runs `spec-harness audit --if-round`, which on `main` says
+  there is no round and passes, and the README's diagram names every CI
+  check. Step 2 says to run the commands in Git Bash on Windows.
+- The adopting guide has a section for Spec Kit and OpenSpec - the layouts
+  spec-graph reads, `ignoreStatus` for Spec Kit's `**Status**: Draft`, the
+  extension that writes both tools' configuration and the CI job - and one
+  for where else the tools run: spec-family/action, the Spec Kit extension,
+  the two MCP servers and the Claude Code plugin. Its GitHub job names its
+  image, `ubuntu-24.04`. Its notes on releases older than round 28's give
+  way to one line naming those releases.
+- The concepts gain finding, severity, hint and exit codes, with the split
+  between `warning` and spec-graph's `warn`, `note` and its `info`;
+  `ignoreStatus`; identifier family, which is not the spec family; citation,
+  with spec-guard's ghost and stale citations; and spec-graph's selectors
+  and project rules, the third way to extend the family. *Dispositions* says
+  what the word means in spec-brief and in spec-graph, and that the rule id
+  `stale-premise` names two checks.
 - The adopting guide's CI jobs run `spec-harness audit --if-round`, from
   spec-harness 0.25.0, after `premises`, in GitHub's annotations and
   GitLab's Code Quality: the round's report as a whole on a branch that
