@@ -516,6 +516,11 @@ which calls `ci.yml`, run every leg. The matrix keeps naming every image
 and every Node, so `tests/runner-images.test.ts` reads it as before; the
 pull request's legs are an `exclude` chosen by the event.
 
+One more job, `all green`, needs every other job in `ci.yml` and fails
+unless each passed or was skipped on purpose. A main ruleset that requires
+checks requires that one: a required check for each leg would name legs a
+pull request does not run, and wait on them forever.
+
 **Consequences.** A break on Node 24 alone, or on `ubuntu-26.04` alone,
 is found on main rather than on the pull request, and a release still
 runs every leg before it stages a version. Moving a leg into or out of
