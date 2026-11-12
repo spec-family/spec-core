@@ -497,3 +497,32 @@ run in which it passed. When a vitest release fails that assertion, its
 cache forgets a failure as vitest 4's did, and the record may go: in a pull
 request that takes it out and nothing else, whose full sweep reads a mean
 within the range of the sweeps with it.
+
+## Amended 2026-11-12: a pull request runs four legs
+
+**Context.** Each push to a pull request ran the suite's whole matrix:
+twelve legs in the four tools, nine here, beside the mutation jobs. On
+2026-11-11, with five pull requests open across the family at once, the
+median job waited 3.8 minutes for a runner and one in ten waited more than
+24.8; the queue, not the laptop, set the pace. A leg that only a push to
+main would have caught has not been seen: the legs fail together or on one
+operating system, and the floor of each operating system catches that.
+
+**Decision.** On a pull request the matrix runs four legs: Node 22 and 26
+on `ubuntu-24.04`, the gates' image, and Node 22 on Windows and macOS.
+Here that is four of nine; in the tools, which also list `ubuntu-26.04`,
+four of twelve. A push to main, a manual run, the schedule and a release,
+which calls `ci.yml`, run every leg. The matrix keeps naming every image
+and every Node, so `tests/runner-images.test.ts` reads it as before; the
+pull request's legs are an `exclude` chosen by the event.
+
+One more job, `all green`, needs every other job in `ci.yml` and fails
+unless each passed or was skipped on purpose. A main ruleset that requires
+checks requires that one: a required check for each leg would name legs a
+pull request does not run, and wait on them forever.
+
+**Consequences.** A break on Node 24 alone, or on `ubuntu-26.04` alone,
+is found on main rather than on the pull request, and a release still
+runs every leg before it stages a version. Moving a leg into or out of
+the matrix is the procedure above; which legs a pull request runs is this
+amendment's to change.
