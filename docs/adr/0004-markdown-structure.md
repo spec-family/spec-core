@@ -229,11 +229,60 @@ from spec-graph as they stood, so the tools answer alike:
 - spec-graph's own cases are the tests here, each answered as it answered
   them; spec-graph reads through these from its next release.
 
+*Amended 2026-11-12.* **GitHub's anchor, beside the slug.** A heading's
+`slug` and `anchor` are spec-graph's, and its item ids are made of them, so
+they stay as they are. They are not GitHub's: spec-graph 0.25.0 reported
+`#snake_case_name` and `#why-remove-restricted_std` as broken, each an
+anchor GitHub renders (round 29's evaluation of spec-graph, F5), and the
+slug of a release-please heading, `## [1.2.0](https://...) (2024-01-01)`,
+holds the letters of its link's address where GitHub's anchor is
+`120-2024-01-01`.
+Each heading now also has **`githubAnchor`**, the anchor GitHub gives it,
+and `githubSlug` gives GitHub's slug of a text:
+
+- **The text as rendered.** GitHub slugs the text its renderer shows, so
+  `renderedText` reads the one line of a heading as GitHub's cmark-gfm does
+  for what reaches a slug: code spans, backslash escapes, character
+  references, raw HTML tags, autolinks, inline links (their text) and images
+  (nothing), and emphasis of `*` and `_` by CommonMark's delimiter rules,
+  version 0.29, where a symbol beside a run is not punctuation. This is the
+  one place the scanner renders, and only a line; it stays linear
+  (`tests/markdown/linear.test.ts`).
+- **The slug.** Each character lowered on its own, so no final sigma is
+  made; every character dropped but letters (`Alphabetic`), marks, decimal
+  digits, connector punctuation such as `_`, hyphens and spaces; each space
+  a hyphen. A tab and a no-break space are dropped, where `slugify`
+  hyphenates them.
+- **Repeats** are counted among the GitHub slugs as `anchor` counts slugs:
+  `-1`, `-2`, skipping a suffixed form a heading already took.
+- **Undecided is `null`.** A named character reference outside the
+  ISO 8859-1 names and a few others is a character or literal text by
+  HTML's table of 2,231 names, and a full reference link, `[text][label]`,
+  is a link or literal text by a definition elsewhere; a heading that holds
+  one has no `githubAnchor`, and takes no place in the count.
+- **Measured, not inferred.** 183 headings in three documents and 136 lines
+  of inline Markdown were rendered by GitHub's Markdown API on 2026-11-12,
+  and every anchor and every text is GitHub's
+  (`tests/markdown/github-anchors.ts`), but for the `null`s above and one
+  difference: GitHub links a bare URL by itself, `https://x.y/_a_`, and keeps
+  the underscores in it, which this reads as emphasis. GitHub also accepts a
+  numeric character reference of up to eight digits, where CommonMark
+  allows seven, and so does this.
+
+What a tool sees: a new field on every heading, and a new export. Nothing a
+tool reads changes until it reads `githubAnchor`; spec-graph is to resolve
+an anchor against it beside `slug` and `anchor`, so a link written against
+the rendered page resolves, and no id moves.
+
 ## Open questions
 
-- **Slugs.** `slugify` keeps spec-graph's results, which drop `_` where
-  GitHub's slugger keeps it. Matching GitHub exactly would change which
-  anchors spec-graph resolves; it waits for a release that can say so.
+- **Slugs.** Settled on 2026-11-12, above: `slugify` keeps spec-graph's
+  results, item ids keep being made of them, and `githubAnchor` is GitHub's.
+- **What else names an anchor.** An HTML `id` or `name` in the document,
+  `<a id="x"></a>`, a `{#custom-id}` that a site generator reads, and a
+  fragment written percent-encoded, `#%E6%A6%82%E8%A6%81`, are each an
+  anchor a reader can follow that no heading gives. Each is left to the tool
+  that resolves anchors until two tools need it.
 - **Embeds.** `![[x]]` is reported as an image in the wiki form. A tool that
   drops images must keep wiki embeds if it reads them as references.
 - **Inline comments.** A comment runs to the next `-->` across blank lines,
