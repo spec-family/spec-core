@@ -247,10 +247,13 @@ the two run side by side.
 - **Status words are read in English.** A document may be written in any
   language and gives its status in English
   ([ADR-0005](adr/0005-the-family-contract.md#documents-and-state)).
-- **The output is not frozen yet.** The tools are before 1.0; from each
-  tool's first release after round 27, two consecutive minor releases keep
-  its JSON fields and exit codes, and a new rule arrives first as a warning
-  or behind an option ([ADR-0009](adr/0009-versions-before-1-0.md)).
+- **The output is not frozen yet.** The tools are before 1.0; from round
+  28's batch (spec-brief 0.14.0, spec-graph 0.25.0, spec-guard 0.34.0,
+  spec-harness 0.25.0), two consecutive minor releases keep their JSON fields
+  and exit codes, and a new rule arrives first as a warning or behind an
+  option ([ADR-0009](adr/0009-versions-before-1-0.md)). The renames that
+  bring the four JSON documents to one envelope wait for round 30
+  ([ADR-0005](adr/0005-the-family-contract.md#findings-and-output)).
 
 ## Measured
 

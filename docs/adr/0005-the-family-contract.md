@@ -479,10 +479,115 @@ tool's CLAUDE.md can point.
   failing assertion, a rule that survived `prove`, a ghost citation and a
   stale one under `--strict`; in spec-graph an error that is one without
   `--strict`. The `description` holds the hint, the next
-  action, after the message. Where a tool does not yet - spec-brief's
-  fingerprint holds the message; spec-guard's `description` has no hint, and
-  its fingerprint of a directive it cannot read holds the message - that is a
-  defect to fix, not a dialect.
+  action, after the message. A tool that does otherwise has a defect to fix,
+  not a dialect. As first written this sentence named two, both fixed since:
+  spec-brief's fingerprint held the message until 0.3.0, which builds it from
+  the rule, the file, the brief and the finding's subject; and spec-guard's
+  `description` had no hint, and its fingerprint of a directive it cannot
+  read held the message, until 0.17.0, which writes the hint after the
+  message and fingerprints the directive as written.
+- *Amended 2026-11-12*: **one envelope for every JSON document, added to
+  during the freeze and renamed into after it.** Measured on the four mains
+  of 2026-11-12 (spec-brief e5db4f1, spec-graph 734f8a8, spec-guard ad46b21,
+  spec-harness 377ee47), the four tools wrote four shapes:
+
+  | tool | the document's version | the tool's version | the findings | a finding |
+  | --- | --- | --- | --- | --- |
+  | spec-brief | `schemaVersion` | `version` | `findings` | `rule`, `severity`, `file`, `line`, `message`, `hint` |
+  | spec-harness | `schemaVersion` | `version` | `findings` | as spec-brief's |
+  | spec-graph | `version` | none | `diagnostics` | as spec-brief's, with `column`, `endLine`, `endColumn` |
+  | spec-guard | `formatVersion` | none | `results`, which hold every assertion run, and `errors` | `kind`, `spec.file`, `spec.line`, `spec.column`, `message`; no `rule`, `severity` or `hint` |
+
+  So `version` meant the tool in two tools and the document in a third, and
+  a script that read the findings of two tools read two field names and two
+  sets of severity words (below). Every JSON document a command writes for a
+  script - `--format json`, spec-guard's `--json` - is one shape:
+
+  ```json
+  {
+    "tool": "spec-guard",
+    "toolVersion": "0.35.0",
+    "schemaVersion": 1,
+    "command": "check",
+    "ok": false,
+    "summary": { "errors": 1, "warnings": 0, "notes": 0 },
+    "findings": [
+      {
+        "rule": "assert-absence",
+        "severity": "error",
+        "message": "\"legacyClient\" appears 2 times in src/billing",
+        "hint": "remove the uses, or record the exception in the spec",
+        "file": "docs/adr/0003-billing.md",
+        "line": 12,
+        "column": 1
+      }
+    ]
+  }
+  ```
+
+  - `tool` is the command's name, without the scope; `toolVersion` the
+    release's version, as its `package.json` gives it; `schemaVersion` an
+    integer, the version of this command's document, which a field removed,
+    renamed or given another meaning moves and a field added does not. Each
+    command's document is versioned on its own, as now.
+  - `command` names the command that wrote the document, in a tool that has
+    more than one; spec-guard's run, which takes no command word, writes
+    `check`, the name its formats are listed under.
+  - `ok` is whether the run was clean, `summary` counts the findings by
+    severity, and `findings` holds one entry for each defect (one defect is
+    one finding, above).
+  - A finding has `rule`, `severity`, `message` and `hint`, and its place:
+    `file`, repository-relative POSIX, and `line`, from 1, with `column`,
+    `endLine` and `endColumn` where the tool has them. A finding that has no
+    hint yet leaves the field out rather than writing an empty one, and is a
+    defect to fix by the rule above.
+  - Whatever else a tool says of a finding is a field of its own beside
+    these, as spec-brief's `brief` and spec-graph's `related` are; whatever
+    else a document holds is a field of its own beside `findings`, as
+    spec-graph's `files` and spec-guard's passing assertions are.
+  - A document that holds no findings, such as spec-graph's graph export or
+    spec-guard's `query`, carries `tool`, `toolVersion`, `schemaVersion` and
+    `command`, and the rest is its own.
+
+  The envelope is not SARIF, which has its own schema and names the tool in
+  `tool.driver`, nor GitLab's Code Quality array or GitHub's workflow
+  commands, whose shapes are the forge's; not a file a tool writes to read
+  back itself, such as spec-graph's baseline or an answer kept under the
+  rule below, which keeps the version key its own ADR gives it; and not yet
+  an MCP server's `structuredContent`, which follows when each tool next
+  changes its server.
+
+  The four tools are in the freeze ADR-0009 sets, so nothing a script reads
+  is renamed or removed now. In round 29 each adds what it lacks beside what
+  it has, with the same value, and round 30, the first after the freeze,
+  renames and removes, moving each `schemaVersion` that changes:
+
+  | tool | added in round 29, beside the old field | renamed or removed in round 30 |
+  | --- | --- | --- |
+  | spec-brief, spec-harness | `toolVersion`, the value of `version` | `version` removed |
+  | spec-graph | `tool`, `toolVersion`, `command`, and `schemaVersion`, the value of `version` | `version` removed; `diagnostics` renamed `findings`; the severities `warn` and `info` written `warning` and `note`, and `summary.infos` renamed `summary.notes` |
+  | spec-guard | `tool`, `toolVersion`, `command`, and `schemaVersion`, the value of `formatVersion`; on each result that failed and each entry of `errors`, `rule` (the id of its SARIF result: the assertion's kind, `invalid-directive`, `rule-cannot-fail` and the rest), `severity` (the level of its GitHub annotation, `notice` written `note`) and `hint`; in `cites` and `claims`, whichever of `severity` and `hint` their findings lack | `formatVersion` removed; `findings` added, the failed results and the entries of `errors` in the family's shape, with `file`, `line` and `column` where `spec` holds them now; `errors` removed. `results` keeps every assertion run, passed or not: a passed assertion is no finding, and a script that audits what ran reads it there |
+
+  Each tool names, in its CHANGELOG, the release that first writes the new
+  fields, and in round 30 the release that removes the old ones, with its
+  `Upgrading:` line.
+- *Amended 2026-11-12*: **the severity words are `error`, `warning` and
+  `note`, and each tool takes `warn` and `info` for two of them.** spec-brief
+  and spec-harness wrote and read `error`, `warning` and `note`, which are
+  SARIF's levels; spec-graph wrote `error`, `warn` and `info`, and read only
+  those in its `severities`. Each refused the other's words, so one
+  configuration could not be written for two tools. The family's words are
+  SARIF's, and wherever a tool reads a severity - a configuration's
+  `rules` or `severities`, an option - it takes `warn` as `warning` and
+  `info` as `note`, beside `off` where it takes `off`, from its round-29
+  release; what it writes keeps its own words until round 30 (the table
+  above). A tool's output maps them one way: SARIF `error`, `warning`,
+  `note`; GitHub's workflow commands `error`, `warning`, `notice`; GitLab
+  `major`, `minor`, `info`, as above. The text format is named `human`, and
+  every tool takes `pretty` for it: spec-brief and spec-harness called it
+  `pretty`, spec-graph and spec-guard `human`, and each refused the other's
+  name. Both names stay accepted after the freeze; a tool's help and
+  reference write `human`.
 - **Tools talk through their CLIs.** One tool reads another's versioned JSON;
   none imports another's package. Shared code arrives only through spec-core
   copies (ADR-0001). Each tool can be released, pinned and dropped on its own.
@@ -588,7 +693,37 @@ tool's CLAUDE.md can point.
   | `draft`, `proposed` | a brief not yet active | no | not yet in force |
   | `accepted`, `active` | the round in progress | yes | in force |
   | `rejected`, `deprecated`, `superseded` | - | no | retired |
+  | `deferred` | a brief set aside: not scheduled, not active | no (proposed 2026-11-12, below) | retired: absorbs no new work |
   | `archived` | a closed round, frozen | no | **a record, not retired**: depending on it is normal |
+
+  *Amended 2026-11-12*: **`deferred` is not in force.** spec-brief writes
+  `deferred` itself, the fourth of its statuses, for a brief whose work is
+  set aside, and the table had no row for it, so the two tools that read a
+  status read it two ways: spec-graph as retired (its lifecycle reference
+  lists `deferred` and `postponed` with `superseded`), spec-guard as in
+  force, since its list of the words that withhold a document is closed and
+  `deferred` is not on it. The family reads it one way: a deferred document
+  does not bind today. spec-guard executes none of its directives, as for
+  `draft`, and lists it with the other documents not in force; spec-graph
+  reads it as it does.
+
+  The other reading, in force everywhere, was weighed and not taken. A
+  deferred brief holds its goals, the assertions that the fix is in, and
+  the fix is the work that was set aside, so spec-guard executing them fails
+  a build on a rule its team chose not to act on yet: a false positive, which
+  costs more than a miss. spec-guard keeps its list closed because every word
+  on it is another way for a rule to stop being enforced without anyone
+  deciding so; `deferred` is a word the family's own tool writes when a
+  person decides exactly that, which is the case the list is for. Nor is it
+  read as `draft` in spec-graph: graph's phase answers whether a document
+  can absorb new work, and work built on a decision that was put off waits
+  on something that may not come.
+
+  spec-guard reporting less is a change the freeze allows (ADR-0009): it
+  names, in its CHANGELOG, the release that first withholds a deferred
+  document, with an `Upgrading:` line for a repository that relied on one's
+  rules, which can run them with `--ignore-status` or write another status.
+  This row is the maintainer's to confirm before spec-guard changes.
 
   A premise a brief asserts (the defect still exists) and a goal it asserts
   (the fix is in) are different: premises run on every build with

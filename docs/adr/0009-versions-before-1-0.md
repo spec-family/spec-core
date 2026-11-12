@@ -108,6 +108,17 @@ later minor, whose CHANGELOG says so under *Changed* with its `Upgrading:`
 line. The definitions of a minor and a patch above are unchanged (the
 maintainer's decision of 2026-11-08).
 
+*Amended 2026-11-12*: **the freeze began with round 28's batch.** "Each
+tool's first release after round 27" reads two ways, since each tool also
+released patches between the two rounds (spec-brief 0.13.1, spec-graph
+0.24.1, spec-guard 0.33.1 and 0.33.2, spec-harness 0.24.1 and 0.24.2), and
+the freeze counts minors. The first of its two minors is the batch round 28
+released on 2026-11-12: spec-brief 0.14.0, spec-graph 0.25.0, spec-guard
+0.34.0 and spec-harness 0.25.0. Round 29's batch is the second, and round 30
+is the first whose releases may rename or remove a field, move a
+`schemaVersion` or give an exit code another meaning; ADR-0005 lists what
+round 30 renames.
+
 After 1.0 the same rule moves up one place: what can turn a run red is a
 major, a feature a minor, and a patch reports less or crashes less.
 
