@@ -9,7 +9,7 @@ nothing about the first.
 | keep code honest to what its Markdown says: specifications, ADRs, READMEs, agent instructions | `@spec-family/spec-guard` | `spec-guard` |
 | keep the documents consistent with each other | `@spec-family/spec-graph` | `spec-graph check` |
 | run rounds of work from briefs, some in parallel | `@spec-family/spec-brief` | `spec-brief lint`, `spec-brief matrix` |
-| let agents run those rounds inside the lines | all of the above and `@spec-family/spec-harness` | the above, `spec-harness premises` and `spec-harness audit --if-round`, plus `spec-harness init --write` once |
+| let agents run those rounds inside the lines | all of the above and `@spec-family/spec-harness` | the above, `spec-harness premises` and `spec-harness audit --if-round --require-measured`, plus `spec-harness init --write` once |
 
 The [overview](overview.md#which-problem-which-tool) goes from the problem
 you have to the tool and the rule that answers it, document by document.
@@ -224,8 +224,8 @@ of the installed file.
 
 ## CI
 
-The jobs below are written for the releases of 2026-11-12 - spec-brief
-0.14.0, spec-graph 0.25.0, spec-guard 0.34.0 and spec-harness 0.25.0 - and
+The jobs below are written for the releases of 2026-11-14 - spec-brief
+0.15.0, spec-graph 0.26.0, spec-guard 0.35.0 and spec-harness 0.26.0 - and
 later ones; each tool's CHANGELOG says what an older release does otherwise.
 
 Every tool exits `0` when clean, `1` when it found something, and `2` when
@@ -266,8 +266,14 @@ archive would refuse, the brief's goals and premises run through spec-guard,
 the rulings whose signatures do not verify, and the dependencies and install
 scripts the round added. It measures them from the base, so its job fetches
 the base with its history - `fetch-depth: 0` on GitHub, `GIT_DEPTH: 0` on
-GitLab - and spec-harness reads the base `.spec-harness.json` names as the
-remote's branch where the checkout has no branch of that name. A job that runs
+GitLab. The base and the allowed signers vouch for the round, so the round
+does not choose them: `--base` names the branch the change merges into, as
+the forge names it, and spec-harness reads the base and the signers from the
+configuration there, not from the round's own `.spec-harness.json`.
+`--require-measured` fails a run that could not measure the round, or
+measured it by what the round can change. The branch name goes through an
+environment variable, never into the command line, where a name could run as
+a command. A job that runs
 on every branch also runs where no round is: on the base, and on a branch
 that names no brief. `--if-round` passes that run, with one line and exit
 `0`, where `audit` alone exits `2` for want of a brief. It passes a round's
@@ -315,7 +321,9 @@ jobs:
       - if: ${{ !cancelled() }}
         run: npx --no-install @spec-family/spec-harness premises --format github
       - if: ${{ !cancelled() }}
-        run: npx --no-install @spec-family/spec-harness audit --if-round --format github
+        env: # the branch the round merges into, as the forge names it, which the round cannot move
+          BASE: origin/${{ github.base_ref || github.event.repository.default_branch }}
+        run: npx --no-install @spec-family/spec-harness audit --if-round --require-measured --base "$BASE" --format github
 ```
 
 - The job names its image, `ubuntu-24.04`, rather than `ubuntu-latest`,
@@ -362,6 +370,10 @@ spec:
   variables:
     GIT_DEPTH: 0 # the base and its history, which audit measures from
   script:
+    # The branch the merge request merges into, or the default branch on a
+    # push, read as remotes/origin/<branch>: the round cannot move it.
+    - base="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_DEFAULT_BRANCH}"
+    - git fetch origin "$base"
     - npm ci
     # The job stops at the first command that fails, so every tool runs once,
     # the worst exit code is kept, and the job ends with it.
@@ -371,7 +383,7 @@ spec:
     - npx --no-install @spec-family/spec-brief lint --format gitlab > gl-spec-brief-lint.json || worst=$(( $? > worst ? $? : worst ))
     - npx --no-install @spec-family/spec-brief matrix --format gitlab > gl-spec-brief-matrix.json || worst=$(( $? > worst ? $? : worst ))
     - npx --no-install @spec-family/spec-harness premises --format gitlab > gl-spec-harness-premises.json || worst=$(( $? > worst ? $? : worst ))
-    - npx --no-install @spec-family/spec-harness audit --if-round --format gitlab > gl-spec-harness-audit.json || worst=$(( $? > worst ? $? : worst ))
+    - npx --no-install @spec-family/spec-harness audit --if-round --require-measured --base "remotes/origin/$base" --format gitlab > gl-spec-harness-audit.json || worst=$(( $? > worst ? $? : worst ))
     - exit $worst
   artifacts:
     when: always
